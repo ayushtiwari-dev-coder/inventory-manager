@@ -1,7 +1,7 @@
 from database.sql_handler import get_all_products,delete_product,update_product_price,update_profit_margin,add_product
 from utils.validation import valid_product_name
-def view_products_flow():
-    products = get_all_products()
+def view_products_flow(user_id):
+    products = get_all_products(user_id)
 
     if not products:
         print("\nNo products found.\n")
@@ -23,9 +23,8 @@ def view_products_flow():
     print("-" * 60)
     return True
 
-def delete_products_flow():
-    if view_products_flow() is False:
-        print("no products")
+def delete_products_flow(user_id):
+    if view_products_flow(user_id) is False:
         return
     while True:
         try:
@@ -33,7 +32,7 @@ def delete_products_flow():
         except ValueError:
             print("invalid id")
             continue
-        result=delete_product(product_id)
+        result=delete_product(user_id,product_id)
         if result["status"]=="not_found":
             print("product not found")
             continue
@@ -41,15 +40,13 @@ def delete_products_flow():
             print("product deleted sucessfully")
             break
 
-def update_product_flow():
-
-    products = get_all_products()
-
-    if not products:
-        print("No products found.")
-        return
+def update_product_flow(user_id):
 
     while True:
+        products = get_all_products(user_id)
+        if not products:
+            print("No products found.")
+            return
         print("\n1. Update product MRP")
         print("2. Update profit margin")
         print("3. Back")
@@ -113,7 +110,7 @@ def update_product_flow():
                     print("value to large")
                     continue
 
-                result = update_product_price(product_id, new_value)
+                result = update_product_price(user_id,product_id, new_value)
 
             # Updating margin
             else:
@@ -127,17 +124,17 @@ def update_product_flow():
                     print("value to large")
                     continue
 
-                result = update_profit_margin(product_id, new_value)
+                result = update_profit_margin(user_id,product_id, new_value)
 
             if result["status"] == "not_found":
                 print("Product not found. Try again.")
                 continue
 
             print("Product updated successfully.")
-            product=get_all_products()
+            products=get_all_products(user_id)
             break
 
-def add_product_flow():
+def add_product_flow(user_id):
     while True:
         try:
             product_name=input("Enter product name: ").strip().lower()
@@ -158,7 +155,7 @@ def add_product_flow():
                 print("mrp should be greater than zero")
                 continue
             if mrp>99999999.99:
-                print("mrp value to large")
+                print("mrp value too large")
                 continue
 
             profit_margin=float(input("Enter margin: "))
@@ -174,11 +171,11 @@ def add_product_flow():
             stock=int(input("enter stock quantity: "))
             if stock<0:
                 print("stock should be greater than or equal to zero")
-
+                continue
         except ValueError:
             print("invalid input")
             continue
-        result=add_product(product_name,mrp,stock,profit_margin)
+        result=add_product(user_id,product_name,mrp,stock,profit_margin)
         if result["status"]=="duplicate_product":
             print("product already exist")
             continue
@@ -192,7 +189,7 @@ def add_product_flow():
         else:
             print("invalid input")
             continue
-def product_manager():
+def product_manager(user_id):
 
     while True:
 
@@ -206,16 +203,16 @@ def product_manager():
         choice = input("Enter your choice: ").strip()
 
         if choice == "1":
-            view_products_flow()
+            view_products_flow(user_id)
 
         elif choice == "2":
-            add_product_flow()
+            add_product_flow(user_id)
 
         elif choice == "3":
-            update_product_flow()
+            update_product_flow(user_id)
 
         elif choice == "4":
-            delete_products_flow()
+            delete_products_flow(user_id)
 
         elif choice == "5":
             break

@@ -3,12 +3,11 @@ from database.sql_handler import record_sale
 from inventory.product_manager import view_products_flow
 
 
-def record_sale_flow():
+def record_sale_flow(user_id):
 
     while True:
 
-        if view_products_flow() is False:
-            print("no products")
+        if view_products_flow(user_id) is False:
             return
 
         try:
@@ -21,7 +20,7 @@ def record_sale_flow():
             continue
 
         try:
-            quantity_input = input("Enter quantity sold(q.for exit): ").strip()
+            quantity_input = input("Enter quantity sold(q to exit): ").strip()
             if quantity_input=="q":
                 break
             quantity=int(quantity_input)
@@ -32,7 +31,7 @@ def record_sale_flow():
             print("Invalid quantity")
             continue
 
-        result = record_sale(product_id, quantity)
+        result = record_sale(user_id,product_id, quantity)
 
         if result["status"] == "invalid_product":
             print("Product not found")
@@ -40,6 +39,10 @@ def record_sale_flow():
 
         elif result["status"] == "insufficient_stock":
             print("Not enough stock available")
+            continue
+
+        elif result["status"]=="invalid_quantity":
+            print("invalid quantity")
             continue
 
         elif result["status"] == "success":
@@ -60,7 +63,7 @@ def record_sale_flow():
         else:
             print("Invalid input")
 
-def sales_manager():
+def sales_manager(user_id):
 
     while True:
 
@@ -71,7 +74,7 @@ def sales_manager():
         choice = input("Enter choice: ").strip()
 
         if choice == "1":
-            record_sale_flow()
+            record_sale_flow(user_id)
 
         elif choice == "2":
             break
