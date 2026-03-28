@@ -9,6 +9,8 @@ def create_tables():
     CREATE TABLE IF NOT EXISTS users(
         user_id INT AUTO_INCREMENT PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
+        name VARCHAR(50),
+        lock_until INT DEFAULT 0,
         password_hash VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -23,7 +25,7 @@ def create_tables():
         stock INT NOT NULL,
         profit_margin DECIMAL(5,2) NOT NULL,
         UNIQUE(user_id, product_name),
-        INDEX(user_id,product_id)
+        INDEX(user_id,product_id),
         FOREIGN KEY(user_id) REFERENCES users(user_id)
     );
     """
@@ -232,14 +234,82 @@ def record_sale(user_id,product_id,quantity_sold):
         cursor.execute(stock_query,(quantity_sold,user_id,product_id))
 
         db.commit()
-
+    
         return {
             "status":"success",
             "product_name":product["product_name"],
             "quantity":quantity_sold,
             "total_sale":total_sale
         }
+    except Exception:
+        if db:
+            db.rollbackO()
+        raise
 
     finally:
         if cursor: cursor.close()
         if db: db.close()
+
+def create_user(username, password_hash):
+    db = get_connection()
+    cursor = db.cursor()
+
+    query = """
+    INSERT INTO users (username, password_hash)
+    VALUES (%s, %s)
+    """
+    try:
+        cursor.execute(query, (username, password_hash))
+        db.commit()
+
+        cursor.close()
+    except errors.IntegrityError:
+        return{"status":"duplicate_user"}
+    db.close()
+def get_user(username):
+    db = get_connection()
+    cursor = db.cursor(dictionary=True)
+
+    query = """
+    SELECT user_id, username, password_hash, name, lock_until
+    FROM users
+    WHERE username = %s
+    """
+
+    cursor.execute(query, (username,))
+    user = cursor.fetchone()
+
+    cursor.close()
+    db.close()
+
+    return user
+def update_lock(username, lock_until):
+    db = get_connection()
+    cursor = db.cursor()
+
+    query = """
+    UPDATE users
+    SET lock_until = %s
+    WHERE username = %s
+    """
+
+    cursor.execute(query, (lock_until, username))
+    db.commit()
+
+    cursor.close()
+    db.close()
+def update_name(username, name):
+    db = get_connection()
+    cursor = db.cursor()
+
+    query = """
+    UPDATE users
+    SET name = %s
+    WHERE username = %s
+    """
+
+    cursor.execute(query, (name, username))
+    db.commit()
+
+    cursor.close()
+    db.close()
