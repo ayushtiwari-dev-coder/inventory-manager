@@ -28,7 +28,7 @@ A Python-based Inventory Management System that allows users to manage products,
 
 ## Tech Stack
 
-- Python 3.x
+- Python 3.12
 - MySQL
 - Command Line Interface (CLI)
 
@@ -38,7 +38,7 @@ A Python-based Inventory Management System that allows users to manage products,
 
 Make sure the following are installed on your machine:
 
-- Python 3.x
+- Python 3.12
 - MySQL
 
 ### Installation
@@ -130,6 +130,6 @@ This project is licensed under the MIT License.
 
 ### Contact
 
-- **Author**: Your Name
+- **Author**: Ayush Tiwari 
 - **Email**: ayushtiwari24512@gmail.com
 
