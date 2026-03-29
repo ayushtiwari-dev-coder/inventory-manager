@@ -1,7 +1,9 @@
-from database.sql_handler import get_all_products,delete_product,update_product_price,update_profit_margin,add_product
 from utils.validation import valid_product_name
+from database.sql_handler import Product
+
+
 def view_products_flow(user_id):
-    products = get_all_products(user_id)
+    products = Product.get_all_products(user_id)  # Using Product class to get all products
 
     if not products:
         print("\nNo products found.\n")
@@ -23,30 +25,50 @@ def view_products_flow(user_id):
     print("-" * 60)
     return True
 
+
 def delete_products_flow(user_id):
-    if view_products_flow(user_id) is False:
+    if not view_products_flow(user_id):
         return
+
     while True:
         try:
-            product_id=int(input("enter product id to delete: ").strip())
+            product_id = input("Enter product ID to delete or enter (q to exit) : ").strip()
+            if product_id in ["exit","q"]:
+                break
+            elif product_id.isdigit():
+                product_id=int(product_id)
+            else:
+                print("invalid input")
+                continue
+            choice=input(f"ARE u sure u want to delete product id {product_id},YOU will lose all data related to that product 1.yes or 2.no: ")
+            if choice in ["no","2"]:
+                continue
+            elif choice not in ["yes","y","1"]:
+                print("invalid input")
+                continue
+            else:
+                print("as u say")
         except ValueError:
-            print("invalid id")
+            print("Invalid ID")
             continue
-        result=delete_product(user_id,product_id)
-        if result["status"]=="not_found":
-            print("product not found")
+        
+        result = Product.delete_product(user_id, product_id)  # Using Product class to delete product
+        print("did u reach")
+        if result["status"] == "not_found":
+            print("Product not found")
             continue
-        elif result["status"]=="success":
-            print("product deleted sucessfully")
+        elif result["status"] == "success":
+            print("Product deleted successfully")
             break
 
-def update_product_flow(user_id):
 
+def update_product_flow(user_id):
     while True:
-        products = get_all_products(user_id)
+        products = Product.get_all_products(user_id)  # Using Product class to get all products
         if not products:
             print("No products found.")
             return
+        
         print("\n1. Update product MRP")
         print("2. Update profit margin")
         print("3. Back")
@@ -102,97 +124,99 @@ def update_product_flow(user_id):
 
             # Updating MRP
             if choice == "1":
-
                 if new_value <= 0:
                     print("MRP must be greater than 0")
                     continue
-                if new_value>99999999:
-                    print("value to large")
+                if new_value > 99999999:
+                    print("Value too large")
                     continue
 
-                result = update_product_price(user_id,product_id, new_value)
+                result = Product.update_product_price(user_id, product_id, new_value)  # Using Product class to update price
 
             # Updating margin
             else:
-
                 mrp = selected_product["mrp"]
 
                 if new_value >= mrp:
                     print("Profit margin cannot be >= MRP")
                     continue
-                if new_value>99999999:
-                    print("value to large")
+                if new_value > 99999999:
+                    print("Value too large")
                     continue
 
-                result = update_profit_margin(user_id,product_id, new_value)
+                result = Product.update_profit_margin(user_id, product_id, new_value)  # Using Product class to update profit margin
 
             if result["status"] == "not_found":
                 print("Product not found. Try again.")
                 continue
 
             print("Product updated successfully.")
-            products=get_all_products(user_id)
             break
+
 
 def add_product_flow(user_id):
     while True:
         try:
-            product_name=input("Enter product name: ").strip().lower()
+            product_name = input("Enter product name: ").strip().lower()
             if not product_name:
-                print("product name cannot be empty")
+                print("Product name cannot be empty")
                 continue
 
-            if len(product_name)>50:
-                    print("product name too long")
-                    continue
-            
+            if len(product_name) > 50:
+                print("Product name too long")
+                continue
+
             if not valid_product_name(product_name):
-                print("invalid characters in product name")
-                continue
-                
-            mrp=float(input("Enter MRP: "))
-            if mrp<=0:
-                print("mrp should be greater than zero")
-                continue
-            if mrp>99999999.99:
-                print("mrp value too large")
+                print("Invalid characters in product name")
                 continue
 
-            profit_margin=float(input("Enter margin: "))
-
-            if profit_margin>=mrp:
-                print("profit margin cannot be >= mrp")
+            mrp = float(input("Enter MRP: "))
+            if mrp <= 0:
+                print("MRP should be greater than zero")
+                continue
+            if mrp > 99999999.99:
+                print("MRP value too large")
                 continue
 
-            if profit_margin>99999999.99:
-                print("margin is to big")
+            profit_margin = float(input("Enter margin: "))
+
+            if profit_margin >= mrp:
+                print("Profit margin cannot be >= MRP")
                 continue
 
-            stock=int(input("enter stock quantity: "))
-            if stock<0:
-                print("stock should be greater than or equal to zero")
+            if profit_margin > 99999999.99:
+                print("Margin is too big")
+                continue
+
+            stock = int(input("Enter stock quantity: "))
+            if stock < 0:
+                print("Stock should be greater than or equal to zero")
                 continue
         except ValueError:
-            print("invalid input")
+            print("Invalid input")
             continue
-        result=add_product(user_id,product_name,mrp,stock,profit_margin)
-        if result["status"]=="duplicate_product":
-            print("product already exist")
+
+        result = Product.add_product(user_id, product_name, mrp, stock, profit_margin)  # Using Product class to add product
+
+        if result["status"] == "duplicate_product":
+            print("Product already exists")
             continue
-        elif result["status"]=="success":
-            print("product added sucessfully")
-        more=input("add another product 1.yes or 2.no: ").strip().lower()
-        if more in ["yes","y","1"]:
+        elif result["status"] == "success":
+            print("Product added successfully")
+
+        more = input("Add another product? 1. Yes  2. No: ").strip().lower()
+
+        if more in ["yes", "y", "1"]:
             continue
-        elif more in ["no","2"]:
+        elif more in ["no", "2"]:
             break
         else:
-            print("invalid input")
+            print("Invalid input")
             continue
+
+
 def product_manager(user_id):
-
     while True:
-
         print("\nPRODUCT MANAGER")
         print("1. View products")
         print("2. Add product")

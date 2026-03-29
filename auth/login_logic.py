@@ -1,10 +1,9 @@
 import time
 from security.hashing import hashing_password
-from database.sql_handler import create_user, get_user, update_lock, update_name
-
+from database.sql_handler import User, Product
 
 def password_attempt(username):
-    user = get_user(username)
+    user = User.get_user(username)  # Calling User class method
     attempts = 0
 
     while attempts < 3:
@@ -19,13 +18,13 @@ def password_attempt(username):
             attempts += 1
 
     lock_until = int(time.time()) + 300
-    update_lock(username, lock_until)
+    User.update_lock(username, lock_until)  # Calling User class method to update lock
 
     return None
 
 
 def setup_name(username):
-    user = get_user(username)
+    user = User.get_user(username)  # Calling User class method
 
     print("\n" + "=" * 40)
     print("PROFILE SETUP")
@@ -48,7 +47,7 @@ def setup_name(username):
             error = True
 
         if not error:
-            update_name(username, name)
+            User.update_name(username, name)  # Calling User class method to update name
             return name
 
 
@@ -69,7 +68,7 @@ def create_account():
         if not username.replace("_", "").replace("-", "").isalnum():
             print("Username can only contain letters, numbers, _ and -")
             error = True
-        if get_user(username):
+        if User.get_user(username):  # Calling User class method
             print("Username already exists")
             error = True
 
@@ -103,20 +102,20 @@ def create_account():
 
             if not error:
                 password_hash = hashing_password(password)
-                create_user(username, password_hash)
+                User.create_user(username, password_hash)  # Calling User class method to create user
 
                 name = setup_name(username)
 
                 print("Account created successfully")
 
-                user = get_user(username)  # Fetch user after creation
+                user = User.get_user(username)  # Fetch user after creation
                 return user["user_id"]  # Return the user_id of the created user
 
 
 def login():
     while True:
         username = input("Enter your username:")
-        user = get_user(username)
+        user = User.get_user(username)  # Calling User class method
 
         if not user:
             print("Username does not exist")

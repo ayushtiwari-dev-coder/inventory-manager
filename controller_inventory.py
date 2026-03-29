@@ -1,12 +1,11 @@
 from inventory.product_manager import product_manager
 from inventory.sales_manager import sales_manager
-from database.sql_handler import create_tables
+from database.sql_handler import Database
+from auth.session_manager import clear_session
 
 
 def inventory_system(user_id):
     try:
-        create_tables()
-
         while True:
 
             print("\nINVENTORY MANAGER")
@@ -28,6 +27,7 @@ def inventory_system(user_id):
                 exit()
             elif choice=="4":
                 print("logging out")
+                clear_session()
                 break
             
             else:
