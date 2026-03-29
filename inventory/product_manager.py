@@ -2,8 +2,8 @@ from utils.validation import valid_product_name
 from database.sql_handler import Product
 
 
-def view_products_flow(user_id):
-    products = Product.get_all_products(user_id)  # Using Product class to get all products
+def view_products_flow(user_id,low_stock_threshold=None):
+    products = Product.get_all_products(user_id,low_stock_threshold)  # Using Product class to get all products
 
     if not products:
         print("\nNo products found.\n")

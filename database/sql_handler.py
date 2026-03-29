@@ -5,9 +5,10 @@ class DatabaseHelper:
     @staticmethod
     def execute_query(query, params=None, fetch_type=None):
         db = get_connection()
-        cursor = db.cursor(dictionary=True)
+        cursor = None
 
         try:
+            cursor=db.cursor(dictionary=True)
             cursor.execute(query, params if params else ())
             if fetch_type==1:
                 return cursor.fetchall() or []
@@ -22,8 +23,8 @@ class DatabaseHelper:
             db.rollback()
             return {"status": "error", "message": str(e)}
         finally:
-            cursor.close()
-            db.close()
+            if cursor:cursor.close()
+            if db: db.close()
 
 class User:
     @staticmethod
@@ -82,17 +83,43 @@ class Product:
         INSERT INTO products (user_id, product_name, mrp, stock, profit_margin)
         VALUES (%s, %s, %s, %s, %s)
         """
-        return DatabaseHelper.execute_query(query, (user_id, product_name, mrp, stock, profit_margin))
+        result=DatabaseHelper.execute_query(query, (user_id, product_name, mrp, stock, profit_margin))
+        if result.get("status")=="error":
+            return {"status":"duplicate_product"}
+        return result
+
 
     @staticmethod
-    def get_all_products(user_id):
-        query = """
-        SELECT product_id, product_name, mrp, stock, profit_margin
-        FROM products
-        WHERE user_id = %s
-        ORDER BY product_name ASC
-        """
-        return DatabaseHelper.execute_query(query, (user_id,), fetch_type=1)
+    def get_all_products(user_id, low_stock_threshold=None, sort_by_stock=False):
+        
+        if low_stock_threshold is not None:
+            query = """
+            SELECT product_id, product_name, mrp, stock, profit_margin
+            FROM products
+            WHERE user_id = %s AND stock < %s
+            ORDER BY stock ASC
+            """
+            params = (user_id, low_stock_threshold)
+        
+        elif sort_by_stock:
+            query = """
+            SELECT product_id, product_name, mrp, stock, profit_margin
+            FROM products
+            WHERE user_id = %s
+            ORDER BY stock DESC
+            """
+            params = (user_id,)
+        
+        else:
+            query = """
+            SELECT product_id, product_name, mrp, stock, profit_margin
+            FROM products
+            WHERE user_id = %s
+            ORDER BY product_name ASC
+            """
+            params = (user_id,)
+
+        return DatabaseHelper.execute_query(query, params, fetch_type=1)
 
     @staticmethod
     def update_product_price(user_id, product_id, new_mrp):
@@ -125,42 +152,70 @@ class Product:
 class Sale:
     @staticmethod
     def record_sale(user_id, product_id, quantity_sold):
+
         if quantity_sold <= 0:
             return {"status": "invalid_quantity"}
 
-        fetch_query = """
-        SELECT product_id, product_name, mrp, stock
-        FROM products
-        WHERE user_id = %s AND product_id = %s
-        FOR UPDATE
-        """
-        product = DatabaseHelper.execute_query(fetch_query, (user_id, product_id), fetch_type=1)
+        db = None
+        cursor = None
 
-        if not product:
-            return {"status": "invalid_product"}
+        try:
+            db = get_connection()
+            cursor = db.cursor(dictionary=True)
 
-        if product[0]["stock"] < quantity_sold:
-            return {"status": "insufficient_stock"}
+            fetch_query = """
+            SELECT product_id, product_name, mrp, stock,profit_margin
+            FROM products
+            WHERE user_id = %s AND product_id = %s
+            FOR UPDATE
+            """
 
-        total_sale = quantity_sold * product[0]["mrp"]
-        insert_query = """
-        INSERT INTO sales (user_id, product_id, quantity, total_sale)
-        VALUES (%s, %s, %s, %s)
-        """
-        DatabaseHelper.execute_query(insert_query, (user_id, product_id, quantity_sold, total_sale))
-        
-        stock_query = """
-        UPDATE products
-        SET stock = stock - %s
-        WHERE user_id = %s AND product_id = %s
-        """
-        DatabaseHelper.execute_query(stock_query, (quantity_sold, user_id, product_id))
-        return{
-            "status":"success",
-            "product_name": product[0]["product_name"],
-            "quantity": quantity_sold,
-            "total_sale":float(total_sale)
-        }
+            cursor.execute(fetch_query, (user_id, product_id))
+            product = cursor.fetchone()
+
+            if not product:
+                return {"status": "invalid_product"}
+
+            if product["stock"] < quantity_sold:
+                return {"status": "insufficient_stock"}
+
+            total_sale = quantity_sold * product["mrp"]
+            total_profit=product["profit_margin"]*quantity_sold
+
+            insert_query = """
+            INSERT INTO sales(user_id, product_id, quantity, total_sale,total_profit)
+            VALUES(%s, %s, %s, %s, %s)
+            """
+
+            cursor.execute(insert_query, (user_id, product_id, quantity_sold, total_sale,total_profit))
+
+            stock_query = """
+            UPDATE products
+            SET stock = stock - %s
+            WHERE user_id = %s AND product_id = %s
+            """
+
+            cursor.execute(stock_query, (quantity_sold, user_id, product_id))
+
+            db.commit()
+
+            return {
+                "status": "success",
+                "product_name": product["product_name"],
+                "quantity": quantity_sold,
+                "total_sale": total_sale
+            }
+
+        except Exception:
+            if db:
+                db.rollback()
+            raise
+
+        finally:
+            if cursor: cursor.close()
+            if db: db.close()
+
+
 
 class Database:
     @staticmethod
@@ -195,6 +250,7 @@ class Database:
             user_id INT NOT NULL,
             product_id INT NOT NULL,
             quantity INT NOT NULL,
+            total_profit DECIMAL(10,2) NOT NULL DEFAULT 0,
             total_sale DECIMAL(10,2) NOT NULL,
             sale_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(user_id) REFERENCES users(user_id),
@@ -207,3 +263,4 @@ class Database:
         db.commit()
         cursor.close()
         db.close()
+
