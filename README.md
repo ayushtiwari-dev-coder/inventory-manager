@@ -1,135 +1,206 @@
-# Inventory Management System
+# Smart Inventory Manager 📦
 
-A Python-based Inventory Management System that allows users to manage products, sales, and user accounts. This system supports features such as account creation, login, product management (view, add, update, delete), and sales tracking with multiple user support.
+A modular Python CLI application designed to help shopkeepers manage products, track sales, and analyze business performance. Built with MySQL for persistent storage, OOP architecture, and a clean separation of concerns across modules.
 
-## Features
+## ⚠️ How to Run
 
-- **Account Management**:
-  - User Registration
-  - Login System with password hashing
-  - Account Lock after multiple failed login attempts
-
-- **Product Management**:
-  - Add new products
-  - View products in inventory
-  - Update product details (price, stock, profit margin)
-  - Delete products
-
-- **Sales Management**:
-  - Record sales with quantity and total sale amount
-  - Automatically update product stock when a sale is made
-
-- **Multi-User Support**:
-  - Different users can manage products and sales independently
-
-- **Database**:
-  - MySQL-based database to store user, product, and sales data.
-  - Uses Foreign Key relationships to link products and sales to users.
-
-## Tech Stack
-
-- Python 3.12
-- MySQL
-- Command Line Interface (CLI)
-
-## Getting Started
-
-### Prerequisites
-
-Make sure the following are installed on your machine:
-
-- Python 3.12
-- MySQL
-
-### Installation
-
-1. **Clone the repository**:
+1. Run the following command:
     ```bash
-    git clone https://github.com/your-username/inventory-management.git
-    cd inventory-management
+    python main.py
     ```
 
-2. **Install the required Python dependencies**:
-    ```bash
-    pip install -r requirements.txt
+2. Ensure MySQL is running and your `database/connection.py` is configured with your credentials before starting.
+
+## 📁 Project Structure
+
+← Entry point 
+├── auth/ 
+│   ├── login_logic.py               ← Account creation, login, lockout 
+│   └── session_manager.py           ← Session persistence via pickle 
+├── database/ 
+│   ├── connection.py                ← MySQL connection (gitignored) 
+│   └── sql_handler.py               ← All database classes and queries 
+├── inventory/ 
+│   ├── product_manager.py           ← Product CRUD flow 
+│   └── sales_manager.py             ← Sales recording flow 
+├── analytics/ 
+│   ├── reports.py                   ← Analytics query class 
+│   └── analytics_controller.py     ← Analytics display and menu 
+├── utils/ 
+│   └── validation.py                ← Input validation helpers 
+└── controller_inventory.py          ← Main inventory dashboard
+
+## 🔐 Authentication System
+
+- **Register** with username and password validation.
+- Passwords hashed with SHA-256 before storage.
+- 3 wrong attempts trigger a 5-minute account lockout.
+- **Session** saved after login — auto-login on next launch via pickle.
+- **Logout** clears session file.
+
+## 👤 Session Management
+
+- Session stored locally after successful login.
+- On program start — session is checked first.
+- If valid session exists — user goes directly to dashboard.
+- **Logout** clears the session file completely.
+
+## 📦 Product Management
+
+Full product CRUD system with validation at every step:
+
+- **Add product** — name, MRP, profit margin, stock quantity
+- **View all products** — alphabetical order
+- **Update MRP or profit margin** per product
+- **Delete product** with confirmation prompt — cascades to sales history
+- **Duplicate product name** prevention per user
+
+### Validations:
+
+- Profit margin cannot exceed or equal MRP.
+- MRP must be greater than zero.
+- Stock cannot be negative.
+- Product name length and character restrictions.
+
+## 🛒 Sales Recording
+
+Every sale is recorded as an atomic database transaction.
+
+### Process:
+
+1. Display current product list.
+2. User selects product ID and quantity.
+3. System validates stock availability.
+4. Sale is inserted into sales table.
+5. Stock is reduced in products table.
+6. Both operations happen in a single transaction — if either fails, both roll back.
+
+### Data recorded per sale:
+
+- Product reference
+- Quantity sold
+- Total sale value
+- Total profit
+- Timestamp
+
+## ⚠️ Low Stock Alert
+
+- Shown automatically every time the user logs in.
+- Displays all products with stock below threshold (default: 40 units).
+- Ordered from most critical (lowest stock) first.
+- Helps shopkeeper prioritize restocking before starting work.
+
+## 📊 Analytics System
+
+Separate analytics module with clean separation — query logic in `reports.py`, display logic in `analytics_controller.py`.
+
+### Analytics Features:
+
+- **Stock Overview**: All products sorted by current stock — highest to lowest.
+- **Top Products by Profit**: JOIN query across sales and products tables, groups all sales per product, shows total quantity sold and total profit per product. Top 10 products ranked by profit generated.
+
+## 🗄️ Database Design
+
+### Tables:
+
+#### Users:
+- `userid`: INT AUTOINCREMENT | Primary key
+- `username`: VARCHAR(50) | Unique
+- `name`: VARCHAR(50) | Display name
+- `password_hash`: VARCHAR(255) | SHA-256 hashed
+- `lock_until`: INT | Unix timestamp for lockout
+- `created_at`: TIMESTAMP | Auto set
+
+#### Products:
+- `productid`: INT AUTOINCREMENT | Primary key
+- `user_id`: INT | Foreign key → users
+- `product_name`: VARCHAR(50) | Unique per user
+- `mrp`: DECIMAL(10,2) | Selling price
+- `stock`: INT | Current quantity
+- `profit_margin`: DECIMAL(5,2) | Profit per unit
+
+#### Sales:
+- `saleid`: INT AUTOINCREMENT | Primary key
+- `user_id`: INT | Foreign key → users
+- `product_id`: INT | Foreign key → products, CASCADE DELETE
+- `quantity`: INT | Units sold
+- `total_sale`: DECIMAL(10,2) | quantity × MRP
+- `totalprofit`: DECIMAL(10,2) | quantity × profitmargin
+- `sale_time`: TIMESTAMP | Auto set
+
+## 🏗️ Architecture Decisions
+
+- **Why MySQL over JSON**: JSON file storage breaks under concurrent access and has no query capability. MySQL handles multiple users, supports complex queries, and enforces data integrity through foreign keys.
+- **Why atomic transactions in `record_sale`**: A sale involves two operations — inserting a sales record and reducing stock. If either fails, both must roll back. Separate database calls cannot guarantee this. A single transaction with `FOR UPDATE` row locking ensures consistency.
+- **Why cascade delete on sales**: Deleting a product with sales history would leave orphaned records. `ON DELETE CASCADE` removes related sales automatically, maintaining referential integrity.
+- **Why DatabaseHelper abstraction**: Most queries follow the same pattern — connect, execute, commit or fetch, close. `DatabaseHelper.execute_query` handles this once. Individual class methods focus on query logic only.
+- **Why separate analytics module**: Analytics queries are reporting logic, not CRUD logic. Keeping them in `analytics/reports.py` means `sqlhandler.py` stays focused on data operations. Display logic stays in `analyticscontroller.py`.
+
+## 🗂️ Module Responsibilities
+
+- `main.py`: Entry point, session check, login menu
+- `auth/login_logic.py`: Account creation, login, lockout logic
+- `auth/session_manager.py`: Save, load, clear session
+- `database/sql_handler.py`: All database classes — User, Product, Sale, Database
+- `inventory/product_manager.py`: Product CRUD user flows
+- `inventory/sales_manager.py`: Sale recording user flow
+- `analytics/reports.py`: Analytics query class, returns data only
+- `analytics/analytics_controller.py`: Analytics display, menus, formatting
+- `controller_inventory.py`: Main dashboard, low stock alert, routing
+
+## ⚙️ Setup
+
+### Requirements:
+
+- Python 3.12+
+- MySQL Server
+- `mysql-connector-python`
+- `matplotlib`
+- `pandas`
+
+### Install dependencies:
+```bash
+pip install mysql-connector-python matplotlib pandas
+
+
+## Database setup:
+
+1. **Create a MySQL database:**
+    ```sql
+    CREATE DATABASE inventory_manager;
     ```
 
-3. **Set up MySQL**:
-    - Create a new database `inventory_manager`.
-    - Run the following SQL script to create the necessary tables:
-      ```sql
-      CREATE DATABASE IF NOT EXISTS inventory_manager;
+2. **Configure connection: Create `database/connection.py`:**
+    ```python
+    import mysql.connector
 
-      USE inventory_manager;
+    def get_connection():
+        return mysql.connector.connect(
+            host="localhost",
+            user="your_username",
+            password="your_password",
+            database="inventory_manager"
+        )
+    ```
+   Tables are created automatically on first run.
 
-      CREATE TABLE IF NOT EXISTS users (
-          user_id INT AUTO_INCREMENT PRIMARY KEY,
-          username VARCHAR(50) UNIQUE NOT NULL,
-          name VARCHAR(50),
-          lock_until INT DEFAULT 0,
-          password_hash VARCHAR(255) NOT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
+## 🚀 Future Plans
 
-      CREATE TABLE IF NOT EXISTS products (
-          product_id INT AUTO_INCREMENT PRIMARY KEY,
-          user_id INT NOT NULL,
-          product_name VARCHAR(50) NOT NULL,
-          mrp DECIMAL(10,2) NOT NULL,
-          stock INT NOT NULL,
-          profit_margin DECIMAL(5,2) NOT NULL,
-          UNIQUE(user_id, product_name),
-          INDEX(user_id, product_id),
-          FOREIGN KEY(user_id) REFERENCES users(user_id)
-      );
+- **Matplotlib graphs** — daily sales trend, profit distribution, product popularity
+- **Time-based analytics** — daily, weekly, monthly reports
+- **Stock replenishment feature** — add stock to existing products
+- **FastAPI wrapper** — expose system as REST API
+- **Cloud MySQL** — move database to cloud for 24/7 access
+- **Deployment** — host on Railway or Render
 
-      CREATE TABLE IF NOT EXISTS sales (
-          sale_id INT AUTO_INCREMENT PRIMARY KEY,
-          user_id INT NOT NULL,
-          product_id INT NOT NULL,
-          quantity INT NOT NULL,
-          total_sale DECIMAL(10,2) NOT NULL,
-          sale_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY(user_id) REFERENCES users(user_id),
-          FOREIGN KEY(product_id) REFERENCES products(product_id),
-          INDEX(product_id)
-      );
-      ```
+## 👤 Author
 
-4. **Run the program**:
-    - After setting up your database, you can now run the program by executing `main.py`:
-      ```bash
-      python main.py
-      ```
+- **Ayush Tiwari**
+- [GitHub](https://github.com/ayushtiwari-dev-coder)
 
-## Usage
+## 📄 License
 
-### **Account Management**:
-1. **Create an account**: Users can register by providing a username and password.
-2. **Login**: Users can log in to access product and sales management features.
-3. **Account Locking**: Accounts are locked for 5 minutes after 3 failed login attempts.
+MIT License
 
-### **Product Management**:
-- Add new products with details such as product name, MRP (Maximum Retail Price), profit margin, and stock.
-- Update product details like price or profit margin.
-- Delete products from the inventory.
 
-### **Sales Management**:
-- Record sales transactions, which update the stock and calculate the total sale.
-  
-## Future Improvements
-- Implement **API support** for broader access (e.g., for mobile apps).
-- Add **role-based access control (RBAC)** to manage different levels of access (Admin/Worker).
-- Implement **session management** to persist login state.
-
-## License
-
-This project is licensed under the MIT License.
-
----
-
-### Contact
-
-- **Author**: Ayush Tiwari 
-- **Email**: ayushtiwari24512@gmail.com
 
