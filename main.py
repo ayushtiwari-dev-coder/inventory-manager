@@ -20,18 +20,18 @@ while True:
     choice = input("Enter your choice: ").strip()
 
     if choice == "1":
-        user_id = create_account()  # Get user_id after account creation
+        user_id = create_account()  
         user=User.create_user(user_id)
         save_session({"user_id":user_id , "name":user["name"]})
         print("\nAccount created. Please login.\n")
-        inventory_system(user_id)  # Pass user_id to inventory system
+        inventory_system(user_id)  
 
     elif choice == "2":
-        user_id = login()  # Get user_id after login
+        user_id = login() 
         if user_id:
             user=User.get_user_by_id(user_id)
             save_session({"user_id":user_id , "name":user["name"]})
-            inventory_system(user_id)  # Pass user_id to inventory system
+            inventory_system(user_id)  
         else:
             print("Too many wrong attempts. Account locked.")
             

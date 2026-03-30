@@ -71,14 +71,15 @@ def update_product_flow(user_id):
         
         print("\n1. Update product MRP")
         print("2. Update profit margin")
-        print("3. Back")
+        print("3.update stock")
+        print("4. Back")
 
         choice = input("Enter your choice: ").strip()
 
-        if choice == "3":
+        if choice == "4":
             break
 
-        if choice not in ("1", "2"):
+        if choice not in ("1", "2","3"):
             print("Invalid option")
             continue
 
@@ -116,6 +117,25 @@ def update_product_flow(user_id):
                 print("Product not found")
                 continue
 
+            if choice == "3":
+                try:
+                    change = int(input("Enter stock change (positive to add, negative to remove): "))
+                except ValueError:
+                    print("Invalid input")
+                    continue
+                
+                result = Product.update_stock(user_id, product_id, change)
+                
+                if result["status"] == "insufficient_stock":
+                    print("Cannot remove more stock than available.")
+                    continue
+                elif result["status"] == "not_found":
+                    print("Product not found.")
+                    continue
+                
+                print("Stock updated successfully.")
+                break
+
             try:
                 new_value = float(input("Enter new value: "))
             except ValueError:
@@ -134,7 +154,7 @@ def update_product_flow(user_id):
                 result = Product.update_product_price(user_id, product_id, new_value)  # Using Product class to update price
 
             # Updating margin
-            else:
+            elif choice=="2":
                 mrp = selected_product["mrp"]
 
                 if new_value >= mrp:
@@ -145,13 +165,6 @@ def update_product_flow(user_id):
                     continue
 
                 result = Product.update_profit_margin(user_id, product_id, new_value)  # Using Product class to update profit margin
-
-            if result["status"] == "not_found":
-                print("Product not found. Try again.")
-                continue
-
-            print("Product updated successfully.")
-            break
 
 
 def add_product_flow(user_id):
@@ -213,6 +226,8 @@ def add_product_flow(user_id):
         else:
             print("Invalid input")
             continue
+
+
 
 
 def product_manager(user_id):

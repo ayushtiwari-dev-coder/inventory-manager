@@ -148,6 +148,29 @@ class Product:
         WHERE user_id = %s AND product_id = %s
         """
         return DatabaseHelper.execute_query(query, (user_id, product_id))
+    @staticmethod
+    def update_stock(user_id,product_id,change):
+        if change==0:
+            return{"status":"invalid_input"}
+        
+        query_fetch="""
+        SELECT stock FROM products
+        WHERE user_id=%s AND product_id=%s
+        """
+        product=DatabaseHelper.execute_query(query_fetch,(user_id,product_id),fetch_type=2)
+        if not product:
+            return {"status":"not found"}
+        if product["stock"]+change<0:
+            return{"status":"insufficient_stock"}                                            
+
+        query="""
+        UPDATE products
+        SET stock=stock+%s
+        WHERE user_id=%s AND product_id=%s
+        AND stock + %s>=0
+        """
+        return DatabaseHelper.execute_query(query, (change,user_id, product_id,change))
+
 
 class Sale:
     @staticmethod
