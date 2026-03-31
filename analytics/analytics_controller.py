@@ -6,7 +6,9 @@ def analytics_dashboard(user_id):
         print("1. Stock Overview")
         print("2.most selling products")
         print("3.lowest selling products")
-        print("4. exit")
+        print("4. revenue")
+        print("5. Graphs")
+        print("6. exit")
 
         choice = input("Enter your choice: ").strip()
 
@@ -19,7 +21,14 @@ def analytics_dashboard(user_id):
         elif choice == "3":
             analyticsFlow.low_selling_by_product_sold_flow(user_id)
 
-        elif choice == "4":
+        elif choice=="4":
+            analyticsFlow.revenue_summary_flow(user_id)
+
+        elif choice == "5":
+            analyticsFlow.sales_trend_flow(user_id)
+
+        elif choice == "6":
             break
+
         else:
             print("Invalid option")

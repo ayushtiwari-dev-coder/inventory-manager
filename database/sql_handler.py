@@ -286,4 +286,3 @@ class Database:
         db.commit()
         cursor.close()
         db.close()
-
