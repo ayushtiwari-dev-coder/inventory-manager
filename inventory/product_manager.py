@@ -53,7 +53,6 @@ def delete_products_flow(user_id):
             continue
         
         result = Product.delete_product(user_id, product_id)  # Using Product class to delete product
-        print("did u reach")
         if result["status"] == "not_found":
             print("Product not found")
             continue
@@ -150,7 +149,6 @@ def update_product_flow(user_id):
                 if new_value > 99999999:
                     print("Value too large")
                     continue
-
                 result = Product.update_product_price(user_id, product_id, new_value)  # Using Product class to update price
 
             # Updating margin
@@ -165,7 +163,12 @@ def update_product_flow(user_id):
                     continue
 
                 result = Product.update_profit_margin(user_id, product_id, new_value)  # Using Product class to update profit margin
-
+            if result["status"]=="not_found":
+                print("product not found")
+                break
+            elif result["status"]=="success":
+                print("product updated successfully")
+                break
 
 def add_product_flow(user_id):
     while True:
