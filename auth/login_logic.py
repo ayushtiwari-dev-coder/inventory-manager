@@ -105,11 +105,11 @@ def create_account():
                 User.create_user(username, password_hash)  # Calling User class method to create user
 
                 name = setup_name(username)
-
+                User.update_name(username,name)
                 print("Account created successfully")
 
                 user = User.get_user(username)  # Fetch user after creation
-                return user["user_id"]  # Return the user_id of the created user
+                return user["user_id"],user["name"]  # Return the user_id of the created user
 
 
 def login():

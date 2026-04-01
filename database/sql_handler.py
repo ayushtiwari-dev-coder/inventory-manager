@@ -159,7 +159,7 @@ class Product:
         """
         product=DatabaseHelper.execute_query(query_fetch,(user_id,product_id),fetch_type=2)
         if not product:
-            return {"status":"not found"}
+            return {"status":"not_found"}
         if product["stock"]+change<0:
             return{"status":"insufficient_stock"}                                            
 

@@ -20,11 +20,10 @@ while True:
     choice = input("Enter your choice: ").strip()
 
     if choice == "1":
-        user_id = create_account()  
-        user=User.create_user(user_id)
-        save_session({"user_id":user_id , "name":user["name"]})
-        print("\nAccount created. Please login.\n")
-        inventory_system(user_id)  
+        user_id,name = create_account()
+        save_session({"user_id":user_id , "name":name})
+        print("\nAccount created.")
+        inventory_system(user_id)
 
     elif choice == "2":
         user_id = login() 
