@@ -152,24 +152,43 @@ class Product:
     def update_stock(user_id,product_id,change):
         if change==0:
             return{"status":"invalid_input"}
+
+        db=None
+        cursor=None
         
         query_fetch="""
         SELECT stock FROM products
         WHERE user_id=%s AND product_id=%s
+        FOR UPDATE
         """
-        product=DatabaseHelper.execute_query(query_fetch,(user_id,product_id),fetch_type=2)
-        if not product:
-            return {"status":"not_found"}
-        if product["stock"]+change<0:
-            return{"status":"insufficient_stock"}                                            
+        try:
+            db=get_connection()
+            cursor=db.cursor(dictionary=True)
+            cursor.execute(query_fetch,(user_id,product_id))
+            product=cursor.fetchone()
+            if not product:
+                return {"status":"not_found"}
+            if product["stock"]+change<0:
+                return{"status":"insufficient_stock"}                                            
 
-        query="""
-        UPDATE products
-        SET stock=stock+%s
-        WHERE user_id=%s AND product_id=%s
-        AND stock + %s>=0
-        """
-        return DatabaseHelper.execute_query(query, (change,user_id, product_id,change))
+            query_update="""
+            UPDATE products
+            SET stock=stock+%s
+            WHERE user_id=%s AND product_id=%s
+            AND stock + %s>=0
+            """
+            cursor.execute(query_update, (change,user_id, product_id,change))
+            db.commit()
+            if cursor.rowcount==0:
+                return{"status":"not_found"}
+            return {"status":"success"}
+        except Exception:
+            if db:
+                db.rollback()
+            raise
+        finally:
+            if cursor: cursor.close()
+            if db: db.close()
 
 
 class Sale:

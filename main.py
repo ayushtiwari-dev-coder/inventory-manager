@@ -1,7 +1,7 @@
 from database.sql_handler import Database,User
 from auth.login_logic import create_account, login
 from controller_inventory import inventory_system
-from auth.session_manager import load_session,clear_session,save_session
+from auth.session_manager import load_session,save_session
 Database.create_tables()
 session=load_session()
 if session:
