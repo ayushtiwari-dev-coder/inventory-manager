@@ -1,34 +1,21 @@
-from analytics.report import analytics,analyticsFlow
+from analytics.report import analytics, analyticsFlow
 
-def analytics_dashboard(user_id):
-    while True:
-        print("\nANALYTICS")
-        print("1. Stock Overview")
-        print("2.most selling products")
-        print("3.lowest selling products")
-        print("4. revenue")
-        print("5. Graphs")
-        print("6. exit")
 
-        choice = input("Enter your choice: ").strip()
+def stock_overview(user_id):
+    return analytics.stock_overview(user_id)
 
-        if choice == "1":
-            analytics.stock_overview(user_id)
 
-        elif choice=="2":
-            analyticsFlow.top_products_by_profit_flow(user_id)
+def top_products(user_id):
+    return analyticsFlow.top_products_by_profit_flow(user_id)
 
-        elif choice == "3":
-            analyticsFlow.low_selling_by_product_sold_flow(user_id)
 
-        elif choice=="4":
-            analyticsFlow.revenue_summary_flow(user_id)
+def lowest_selling_products(user_id):
+    return analyticsFlow.low_selling_by_product_sold_flow(user_id)
 
-        elif choice == "5":
-            analyticsFlow.sales_trend_flow(user_id)
 
-        elif choice == "6":
-            break
+def revenue_summary(user_id):
+    return analyticsFlow.revenue_summary_flow(user_id)
 
-        else:
-            print("Invalid option")
+
+def sales_trend(user_id):
+    return analyticsFlow.sales_trend_flow(user_id)
