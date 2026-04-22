@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth - InvManager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="login-container">
+
+        <div id="login-section" class="auth-card">
+            <h2>User Login</h2>
+            <div class="input-group">
+                <label for="login-username">Username</label>
+                <input type="text" id="login-username" placeholder="Enter username">
+            </div>
+            <div class="input-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" placeholder="Enter password">
+            </div>
+            <button id="btn-login-submit" class="auth-btn">Login</button>
+            <a href="#" id="link-to-register" class="toggle-link">Don't have an account? Register</a>
+        </div>
+
+        <div id="register-section" class="auth-card" style="display: none;">
+            <h2>Create Account</h2>
+            <div class="input-group">
+                <label for="reg-fullname">Full Name</label>
+                <input type="text" id="reg-fullname" placeholder="Enter name">
+            </div>
+            <div class="input-group">
+                <label for="reg-username">Username</label>
+                <input type="text" id="reg-username" placeholder="Choose username">
+            </div>
+            <div class="input-group">
+                <label for="reg-password">Password</label>
+                <input type="password" id="reg-password" placeholder="Min 8 characters">
+            </div>
+            <button id="btn-register-submit" class="auth-btn">Register</button>
+            <a href="#" id="link-to-login" class="toggle-link" >Already have an account? Login</a>
+        </div>
+    </div>
+    <script type="module" src="login.js">
+        
+    </script>
+
+</body>
+
+</html>

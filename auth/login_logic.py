@@ -1,20 +1,19 @@
 import time
-from security.hashing import hashing_password
+from security.hashing import hashing_password,check_password
 from database.sql_handler import User
-
 
 def login(username, password):
     user = User.get_user(username)
-
     if not user:
         return {
             "status": "error",
             "message": "Username does not exist"
         }
 
-    lock_until = user["lock_until"]
+    # 1. Check if the account is currently locked
     current_time = int(time.time())
-
+    lock_until = user.get("lock_until", 0)
+    
     if current_time < lock_until:
         return {
             "status": "error",
@@ -22,14 +21,30 @@ def login(username, password):
             "time_left": lock_until - current_time
         }
 
-    if user["password_hash"] != hashing_password(password):
-
-        # handle failed attempts externally if needed
+    # 2. Check the password 
+    if not check_password(password,user["password_hash"]):
+        attempts = user.get("failed_attempts", 0) + 1
+        
+        if attempts >= 3:
+            # Lock for 5 minutes (300 seconds)
+            User.update_lock(username, current_time + 300)
+            User.update_failed_attempts(username, 0) # Reset after lock
+            return {
+                "status": "error",
+                "message": "Account locked",
+                "time_left": 300
+            }
+        
+        # Update the database with the new failed count
+        User.update_failed_attempts(username, attempts)
         return {
             "status": "error",
-            "message": "Wrong password"
+            "message": "Wrong password",
+            "attempts_left": 3 - attempts
         }
 
+    # 3. Successful login - Reset attempts back to 0
+    User.update_failed_attempts(username, 0)
     return {
         "status": "success",
         "data": {
@@ -38,7 +53,6 @@ def login(username, password):
             "name": user["name"]
         }
     }
-
 
 def create_account(username, password, name):
 

@@ -65,9 +65,9 @@ def update_product_price(user_id, product_id, new_mrp):
     return Product.update_product_price(user_id, product_id, new_mrp)
 
 
-# -------------------------
+
 # Update Profit Margin
-# -------------------------
+
 
 def update_profit_margin(user_id, product_id, new_margin):
 
@@ -91,9 +91,9 @@ def update_profit_margin(user_id, product_id, new_margin):
     return Product.update_profit_margin(user_id, product_id, new_margin)
 
 
-# -------------------------
+
 # Update Stock
-# -------------------------
+
 
 def update_stock(user_id, product_id, change):
 
@@ -103,9 +103,9 @@ def update_stock(user_id, product_id, change):
     return Product.update_stock(user_id, product_id, change)
 
 
-# -------------------------
+
 # Delete Product
-# -------------------------
+
 
 def delete_product(user_id, product_id):
 

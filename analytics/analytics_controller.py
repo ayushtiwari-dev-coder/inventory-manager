@@ -19,3 +19,6 @@ def revenue_summary(user_id):
 
 def sales_trend(user_id):
     return analyticsFlow.sales_trend_flow(user_id)
+
+
+# uvicorn main:app --host 0.0.0.0 --port 8000

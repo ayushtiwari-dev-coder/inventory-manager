@@ -22,6 +22,9 @@ class DatabaseHelper:
         except errors.IntegrityError as e:
             db.rollback()
             return {"status": "error", "message": str(e)}
+        except Exception as e:
+            db.rollback()
+            return {"status": "error", "message": str(e)}
         finally:
             if cursor:cursor.close()
             if db: db.close()
@@ -47,7 +50,7 @@ class User:
     @staticmethod
     def get_user(username):
         query = """
-        SELECT user_id, username, password_hash, name, lock_until
+        SELECT user_id, username, password_hash, name, lock_until,failed_attempts
         FROM users
         WHERE username = %s
         """
@@ -70,6 +73,15 @@ class User:
         WHERE username = %s
         """
         return DatabaseHelper.execute_query(query, (name, username))
+    
+    @staticmethod
+    def update_failed_attempts(username, attempts):
+        query = """
+        UPDATE users
+        SET failed_attempts = %s
+        WHERE username = %s
+        """
+        return DatabaseHelper.execute_query(query, (attempts, username))
 
 class Product:
     @staticmethod
@@ -258,6 +270,31 @@ class Sale:
             if db: db.close()
 
 
+    @staticmethod
+    def get_recent_sales(user_id, limit=10):
+
+        query = """
+        SELECT
+            s.sale_time,
+            p.product_name,
+            s.quantity,
+            s.total_sale,
+            s.total_profit
+        FROM sales s
+        JOIN products p
+            ON s.product_id = p.product_id
+        WHERE s.user_id = %s
+        ORDER BY s.sale_time DESC
+        LIMIT %s
+        """
+
+        return DatabaseHelper.execute_query(
+            query,
+            (user_id, limit),
+            fetch_type=1
+        )
+
+
 
 class Database:
     @staticmethod
@@ -268,6 +305,7 @@ class Database:
         CREATE TABLE IF NOT EXISTS users (
             user_id INT AUTO_INCREMENT PRIMARY KEY,
             username VARCHAR(50) UNIQUE NOT NULL,
+            failed_attempts INT DEFAULT 0,
             name VARCHAR(50),
             lock_until INT DEFAULT 0,
             password_hash VARCHAR(255) NOT NULL,

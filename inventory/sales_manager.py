@@ -38,3 +38,16 @@ def record_sale(user_id, product_id, quantity):
                 "total_sale": result["total_sale"]
             }
         }
+def get_recent_sales(user_id):
+
+    result = Sale.get_recent_sales(user_id)
+
+    if not result:
+        return {
+            "status": "no_sales"
+        }
+
+    return {
+        "status": "success",
+        "sales": result
+    }
