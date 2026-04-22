@@ -16,6 +16,7 @@ venv/
 # deployment/temporary scripts
 update_aiven.py
 bundle.py
+inventory_full_context.txt
 
 # local experiment files
 cfpm/
