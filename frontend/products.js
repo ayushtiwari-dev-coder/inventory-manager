@@ -63,9 +63,10 @@ const Product = {
     delete: async () => {
         try{
         return await apiRequest(`/products/${selectedProductId}`, "DELETE");
-        }catch(error){
-            throw new Error("");
-            
+        }catch(err){
+        console.error("delete error: ",err.message);
+        throw new Error(err.message);
+        
         }
     }
 
