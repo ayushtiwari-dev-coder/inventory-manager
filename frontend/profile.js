@@ -1,29 +1,34 @@
-import { getToken } from "./helping.js";
+import { apiRequest, getToken } from "./helping.js";
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
 
-const token = getToken();
+    const token=getToken();
+    if(!token){
+        window.location.href="index.html";
+        return;
+    }
 
-if(!token){
-    window.location.href = "index.html";
-}
+    const usernameField = document.getElementById("display-username");
+    const nameField = document.getElementById("display-name");
+    const logoutBtn = document.getElementById("btn-logout");
 
-const username = localStorage.getItem("username");
-const name = localStorage.getItem("name");
+    try {
 
-document.getElementById("display-username").innerText = username || "";
-document.getElementById("display-name").innerText = name || "";
+        const result = await apiRequest("/profile", "GET");
 
-const logoutBtn = document.getElementById("btn-logout");
+        if (result.status === "success") {
+            usernameField.innerText = result.data.username;
+            nameField.innerText = result.data.name;
+        }
 
-logoutBtn.addEventListener("click", () => {
+    } catch (err) {
+        console.error("Profile load error:", err.message);
+    }
 
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    localStorage.removeItem("name");
-
-    window.location.href = "index.html";
-
-});
+    // LOGOUT
+    logoutBtn.addEventListener("click", () => {
+        localStorage.removeItem("token");
+        window.location.href = "index.html";
+    });
 
 });

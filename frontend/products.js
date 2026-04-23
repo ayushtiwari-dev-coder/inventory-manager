@@ -61,8 +61,14 @@ const Product = {
     },
 
     delete: async () => {
+        try{
         return await apiRequest(`/products/${selectedProductId}`, "DELETE");
+        }catch(error){
+            throw new Error("");
+            
+        }
     }
+
 };
 
 // 3. Load & Render Functions

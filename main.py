@@ -10,8 +10,8 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-# --- YOUR LOGIC IMPORTS ---
-from database.sql_handler import Database
+# --- LOGIC IMPORTS ---
+from database.sql_handler import Database,User
 from auth.login_logic import create_account, login
 from inventory.product_manager import (
     get_products, add_product, update_product_price,
@@ -147,6 +147,21 @@ def register(data: RegisterRequest):
 
 
 # --- PROTECTED PRODUCT ROUTES ---
+
+# profile routes
+
+@app.get("/profile")
+def profile(user: dict = Depends(get_current_user)):
+    result=User.get_user_by_id(user["user_id"])
+    if not result:
+        return {"status":"error"}
+    return{
+        "status":"success",
+        "data":{
+            "username":result["username"],
+            "name":result["name"]
+        }
+    }
 
 @app.get("/products")
 def view_products_api(user: dict = Depends(get_current_user)):
