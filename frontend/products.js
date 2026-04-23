@@ -1,5 +1,5 @@
-import { Sale } from "./sales.js"; 
-import { apiRequest, openModal, closeModal, handleSubmit, configureModalFields, clearInputs } from "./helping.js";
+import { Sale,loadDailySummary,loadSales} from "./sales.js"; 
+import { apiRequest, openModal, closeModal, handleSubmit, configureModalFields,clearInputs, validateInputs,resetmodal } from "./helping.js";
 
 // 1. Memory for the script
 let selectedProductId = null; 
@@ -11,6 +11,13 @@ const Product = {
         const mrp = parseFloat(document.getElementById("product-mrp").value);
         const profit_margin = parseFloat(document.getElementById("product-margin").value);
         const stock = parseInt(document.getElementById("product-stock").value);
+
+        validateInputs({
+            product_name,
+            mrp,
+            profit_margin,
+            stock
+        });
         return await apiRequest("/products", "POST", { product_name, mrp, profit_margin, stock });
     },
 
@@ -22,18 +29,29 @@ const Product = {
         let lastResult = { status: "success" };
 
         if (mrpVal !== "") {
+            validateInputs({
+                mrp:mrpVal
+            });
             lastResult = await apiRequest("/products/update-price", "PUT", { 
                 product_id: id, 
                 new_mrp: parseFloat(mrpVal) 
             });
         }
         if (marginVal !== "") {
+
+            validateInputs({
+                profit_margin:marginVal
+            });
             lastResult = await apiRequest("/products/update-margin", "PUT", { 
                 product_id: id, 
                 new_margin: parseFloat(marginVal) 
             });
         }
         if (stockVal !== "") {
+
+            validateInputs({
+                stock:stockVal
+            });
             lastResult = await apiRequest("/products/update-stock", "PUT", { 
                 product_id: id, 
                 change: parseInt(stockVal) 
@@ -89,18 +107,26 @@ document.addEventListener("click", (e) => {
     const productId = e.target.dataset.id;
     const submitBtn = document.getElementById("btn-submit-product");
 
+    // Case: Add / Edit / Delete
+    if (productId) { selectedProductId = productId; }
+
     // Case: Sale
     if (mode === "sale") {
+        resetmodal(submitBtn)
+
       configureModalFields("sale"); 
       document.getElementById("modal-title").innerText = "Record Sale";
       document.getElementById("product-stock").value = ""; 
 
       submitBtn.onclick = () => {
-        handleSubmit(submitBtn, () => Sale.record(productId), (result) => {
+        handleSubmit(submitBtn, () => Sale.record(selectedProductId), (result) => {
           if (result.status === "success") {
             closeModal("add-product-modal");
             clearInputs("add-product-modal");
             loadProducts(); 
+            loadDailySummary()
+            loadSales()
+            
           }
         });
       };
@@ -108,19 +134,19 @@ document.addEventListener("click", (e) => {
       return; 
     }
 
-    // Case: Add / Edit / Delete
-    if (productId) { selectedProductId = productId; }
+    
     submitBtn.onclick = null; 
     submitBtn.dataset.submitAction = mode;
 
     if (mode === "delete") {
-      const confirmed = confirm(`Delete product #${productId}?`);
+      const confirmed = confirm(`Delete product #${selectedProductId}?`);
       if (confirmed) {
         Product.delete().then((res) => { if (res.status === "success") loadProducts(); });
       }
       return;
     }
 
+    resetmodal(submitBtn)
     configureModalFields(mode);
     openModal("add-product-modal");
   }

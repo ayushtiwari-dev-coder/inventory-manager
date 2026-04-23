@@ -56,8 +56,3 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 });
-
-document.addEventListener("DOMContentLoaded", () => {
-    loadDailySummary()
-    loadSales()
-})

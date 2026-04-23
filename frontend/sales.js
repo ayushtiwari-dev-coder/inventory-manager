@@ -1,4 +1,4 @@
-import { apiRequest, closeModal, handleSubmit, clearInputs } from "./helping.js";
+import { apiRequest, closeModal, handleSubmit, clearInputs,validateInputs } from "./helping.js";
 
 export const Sale = {
     record: async (productId) => {
@@ -6,11 +6,9 @@ export const Sale = {
         const qtyInput = document.getElementById("product-stock");
         const qtyValue = qtyInput.value.trim();
 
-        // ERROR HANDLING: Stop the user if the field is empty or not a positive number
-        if (qtyValue === "" || isNaN(parseInt(qtyValue)) || parseInt(qtyValue) <= 0) {
-            alert("Please enter a valid quantity greater than zero.");
-            return;
-        }
+        validateInputs({
+            quantity:qtyValue
+        });
 
         // Hits the backend: @app.post("/sales")
         return await apiRequest("/sales", "POST", { 

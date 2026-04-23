@@ -1,4 +1,4 @@
-import { apiRequest,clearInputs,setLoading } from "./helping.js";
+import { apiRequest,clearInputs,setLoading,validateInputs } from "./helping.js";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -33,10 +33,17 @@ async function handle_register(e) {
     const name = document.getElementById("reg-fullname").value;
     const username = document.getElementById("reg-username").value;
     const password = document.getElementById("reg-password").value;
-
+    try{
+    validateInputs({
+        name,
+        username,
+        password
+    });
+    console.log("button clicked")
     setLoading(btn, true);
+    
 
-    try {
+    
 
         const result = await apiRequest("/register", "POST", {
             name: name,
