@@ -17,8 +17,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     sections.forEach(sec => sec.classList.remove("active-section"));
 
-    const activeSection = document.getElementById(lastPage);
+    const activeNav = document.querySelector(`[href="#${lastPage.replace("-page","")}"]`);
+    if(activeNav){
+    activeNav.classList.add("active");
+    }
 
+    const activeSection=document.getElementById(lastPage);
     if(activeSection){
         activeSection.classList.add("active-section");
     }
@@ -27,23 +31,25 @@ document.addEventListener("DOMContentLoaded", () => {
         loadDailySummary();
         loadSales();
     }
-
-    navItems.forEach(item => {
-
-        item.addEventListener("click", function(e){
-
+            navItems.forEach(item => {
+            item.addEventListener("click", function(e){
             e.preventDefault();
 
             const target = this.getAttribute("href").replace("#","") + "-page";
 
             localStorage.setItem("lastPage", target);
 
+            /* FIX START */
+            navItems.forEach(n => n.classList.remove("active"));
+            this.classList.add("active");
+            /* FIX END */
+
             sections.forEach(sec => sec.classList.remove("active-section"));
 
             const activeSection = document.getElementById(target);
 
             if(activeSection){
-                activeSection.classList.add("active-section");
+            activeSection.classList.add("active-section");
             }
 
             if(target === "sales-page"){

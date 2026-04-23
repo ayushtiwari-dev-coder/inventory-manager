@@ -290,7 +290,7 @@ export function validateInputs(data){
             throw new Error("Stock must be a whole number");
         }
 
-        if(stock <= 0){
+        if(stock < 0){
             throw new Error("Stock must be greater than zero");
         }
 
@@ -308,8 +308,8 @@ export function validateInputs(data){
             throw new Error("Quantity must be a whole number");
         }
 
-        if(qty <= 0){
-            throw new Error("Quantity must be greater than zero");
+        if(qty === 0){
+            throw new Error("stock change cannot be zero");
         }
 
         if(qty > 9999999){

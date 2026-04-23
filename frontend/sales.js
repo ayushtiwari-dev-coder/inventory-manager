@@ -78,7 +78,7 @@ function renderSales(sales){
 
         html += `
         <tr>
-            <td>${new Date(s.sale_time).toLocaleString()}</td>
+            <td>${new Date(s.sale_time + "Z").toLocaleString()}</td>
             <td>${s.product_name}</td>
             <td>${s.quantity} </td>
             <td>${s.total_sale}</td>
