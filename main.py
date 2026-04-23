@@ -8,6 +8,7 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 # --- YOUR LOGIC IMPORTS ---
 from database.sql_handler import Database
@@ -197,3 +198,6 @@ def revenue(period: str=None,user: dict = Depends(get_current_user)):
 @app.get("/alerts/low-stock")
 def low_stock(user: dict = Depends(get_current_user)):
     return get_low_stock_products(user["user_id"])
+
+
+app.mount("/",StaticFiles(directory="frontend",html=True),name="frontend")
