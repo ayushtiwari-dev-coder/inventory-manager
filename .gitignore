@@ -6,8 +6,7 @@ __pycache__/
 # Environment files
 .env
 
-# certificate
-ca.pem
+
 
 # Virtual environments
 venv/
