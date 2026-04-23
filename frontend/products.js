@@ -113,6 +113,7 @@ document.addEventListener("click", (e) => {
     // Case: Sale
     if (mode === "sale") {
         resetmodal(submitBtn)
+        delete submitBtn.dataset.submitAction
 
       configureModalFields("sale"); 
       document.getElementById("modal-title").innerText = "Record Sale";
