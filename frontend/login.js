@@ -1,5 +1,11 @@
 import { apiRequest,clearInputs,setLoading,validateInputs } from "./helping.js";
 
+const token=localStorage.getItem("token");
+
+if(token){
+    window.location.href="dashboard.html";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 
             const loginSection = document.getElementById("login-section");

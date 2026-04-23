@@ -1,7 +1,7 @@
 import { getToken } from "./helping.js";
 import "./products.js"
 import { loadSales,loadDailySummary } from "./sales.js";
-
+import "./profile.js"
 
 const token=getToken();
 if(!token){
