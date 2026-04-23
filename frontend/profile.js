@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
 const token = getToken();
 
 if(!token){
-    window.location.href = "login.html";
+    window.location.href = "index.html";
 }
 
 const username = localStorage.getItem("username");
@@ -22,7 +22,7 @@ logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("username");
     localStorage.removeItem("name");
 
-    window.location.href = "login.html";
+    window.location.href = "index.html";
 
 });
 
