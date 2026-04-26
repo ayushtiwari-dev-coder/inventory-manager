@@ -290,7 +290,7 @@ export function validateInputs(data){
             throw new Error("Stock must be a whole number");
         }
 
-        if(stock < 0){
+        if(stock <= 0){
             throw new Error("Stock must be greater than zero");
         }
 

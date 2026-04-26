@@ -2,11 +2,13 @@ import { getToken } from "./helping.js";
 import "./products.js"
 import { loadSales,loadDailySummary } from "./sales.js";
 import "./profile.js"
+import { checkLowStock } from "./analytics.js";
 
 const token=getToken();
 if(!token){
     window.location.href="index.html"
 }
+checkLowStock()
 
 document.addEventListener("DOMContentLoaded", () => {
 

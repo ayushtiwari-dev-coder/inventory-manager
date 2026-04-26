@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
         });
-// This address (127.0.0.1) only works if your Python terminal is ON
+
 const BASE_URL = "https://inventory-manager-fs9t.onrender.com";
 
 async function handle_register(e) {
@@ -114,7 +114,7 @@ async function handle_login(e) {
     }
 }
 
-// Attach listeners to your button IDs
+// Attach listeners to button IDs
 document.addEventListener("DOMContentLoaded", () => {
     const regBtn = document.getElementById("btn-register-submit");
     const loginBtn = document.getElementById("btn-login-submit");

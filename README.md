@@ -1,206 +1,256 @@
-# Smart Inventory Manager 📦
+# Smart Inventory Manager (Web Version) 📦
 
-A modular Python CLI application designed to help shopkeepers manage products, track sales, and analyze business performance. Built with MySQL for persistent storage, OOP architecture, and a clean separation of concerns across modules.
+A full-stack inventory management system built with **FastAPI**, **MySQL**, and **Vanilla JavaScript**.
 
-## ⚠️ How to Run
+This application allows shopkeepers to manage products, track sales, and monitor stock levels through a browser dashboard.
 
-1. Run the following command:
-    ```bash
-    python main.py
-    ```
+The backend is deployed on **Render**, and the database runs on **Aiven MySQL**.
 
-2. Ensure MySQL is running and your `database/connection.py` is configured with your credentials before starting.
+---
 
-## 📁 Project Structure
+# 🚀 Features
 
-← Entry point 
-├── auth/ 
-│   ├── login_logic.py               ← Account creation, login, lockout 
-│   └── session_manager.py           ← Session persistence via pickle 
-├── database/ 
-│   ├── connection.py                ← MySQL connection (gitignored) 
-│   └── sql_handler.py               ← All database classes and queries 
-├── inventory/ 
-│   ├── product_manager.py           ← Product CRUD flow 
-│   └── sales_manager.py             ← Sales recording flow 
-├── analytics/ 
-│   ├── reports.py                   ← Analytics query class 
-│   └── analytics_controller.py     ← Analytics display and menu 
-├── utils/ 
-│   └── validation.py                ← Input validation helpers 
-└── controller_inventory.py          ← Main inventory dashboard
+## Authentication System
+- User registration with validation
+- Secure login using JWT tokens
+- Password hashing using bcrypt
+- Token verification for protected routes
 
-## 🔐 Authentication System
+## Product Management
+Full CRUD inventory system:
 
-- **Register** with username and password validation.
-- Passwords hashed with SHA-256 before storage.
-- 3 wrong attempts trigger a 5-minute account lockout.
-- **Session** saved after login — auto-login on next launch via pickle.
-- **Logout** clears session file.
+- Add product
+- Edit MRP
+- Edit profit margin
+- Adjust stock
+- Delete product
+- Prevent duplicate product names per user
 
-## 👤 Session Management
+### Validations
+- Product name validation
+- MRP must be greater than 0
+- Profit margin cannot exceed MRP
+- Stock validation
+- Input sanitization
 
-- Session stored locally after successful login.
-- On program start — session is checked first.
-- If valid session exists — user goes directly to dashboard.
-- **Logout** clears the session file completely.
+---
 
-## 📦 Product Management
+# 🛒 Sales System
 
-Full product CRUD system with validation at every step:
+Each sale performs an **atomic transaction**:
 
-- **Add product** — name, MRP, profit margin, stock quantity
-- **View all products** — alphabetical order
-- **Update MRP or profit margin** per product
-- **Delete product** with confirmation prompt — cascades to sales history
-- **Duplicate product name** prevention per user
+1. Product is selected
+2. Quantity is validated
+3. Sale record is created
+4. Product stock is updated
+5. Both operations run in a single transaction
 
-### Validations:
+If any step fails → the transaction rolls back.
 
-- Profit margin cannot exceed or equal MRP.
-- MRP must be greater than zero.
-- Stock cannot be negative.
-- Product name length and character restrictions.
+### Data stored per sale
 
-## 🛒 Sales Recording
-
-Every sale is recorded as an atomic database transaction.
-
-### Process:
-
-1. Display current product list.
-2. User selects product ID and quantity.
-3. System validates stock availability.
-4. Sale is inserted into sales table.
-5. Stock is reduced in products table.
-6. Both operations happen in a single transaction — if either fails, both roll back.
-
-### Data recorded per sale:
-
-- Product reference
+- Product ID
 - Quantity sold
 - Total sale value
 - Total profit
 - Timestamp
 
-## ⚠️ Low Stock Alert
+---
 
-- Shown automatically every time the user logs in.
-- Displays all products with stock below threshold (default: 40 units).
-- Ordered from most critical (lowest stock) first.
-- Helps shopkeeper prioritize restocking before starting work.
+# ⚠️ Low Stock Alert
 
-## 📊 Analytics System
+Every time a user logs in:
 
-Separate analytics module with clean separation — query logic in `reports.py`, display logic in `analytics_controller.py`.
+- Products below stock threshold are checked
+- An alert displays low-stock items
+- Ordered from most critical to least critical
 
-### Analytics Features:
+This helps shopkeepers restock before inventory runs out.
 
-- **Stock Overview**: All products sorted by current stock — highest to lowest.
-- **Top Products by Profit**: JOIN query across sales and products tables, groups all sales per product, shows total quantity sold and total profit per product. Top 10 products ranked by profit generated.
+---
 
-## 🗄️ Database Design
+# 📊 Analytics (Planned Feature)
 
-### Tables:
+Analytics section is currently a placeholder.
 
-#### Users:
-- `userid`: INT AUTOINCREMENT | Primary key
-- `username`: VARCHAR(50) | Unique
-- `name`: VARCHAR(50) | Display name
-- `password_hash`: VARCHAR(255) | SHA-256 hashed
-- `lock_until`: INT | Unix timestamp for lockout
-- `created_at`: TIMESTAMP | Auto set
+Planned future analytics features:
 
-#### Products:
-- `productid`: INT AUTOINCREMENT | Primary key
-- `user_id`: INT | Foreign key → users
-- `product_name`: VARCHAR(50) | Unique per user
-- `mrp`: DECIMAL(10,2) | Selling price
-- `stock`: INT | Current quantity
-- `profit_margin`: DECIMAL(5,2) | Profit per unit
+- Revenue summary (3 / 6 / 12 months)
+- Sales trend graphs
+- Top products by profit
+- Least selling products
+- Inventory performance reports
 
-#### Sales:
-- `saleid`: INT AUTOINCREMENT | Primary key
-- `user_id`: INT | Foreign key → users
-- `product_id`: INT | Foreign key → products, CASCADE DELETE
-- `quantity`: INT | Units sold
-- `total_sale`: DECIMAL(10,2) | quantity × MRP
-- `totalprofit`: DECIMAL(10,2) | quantity × profitmargin
-- `sale_time`: TIMESTAMP | Auto set
+---
 
-## 🏗️ Architecture Decisions
+# 🗄️ Database Design
 
-- **Why MySQL over JSON**: JSON file storage breaks under concurrent access and has no query capability. MySQL handles multiple users, supports complex queries, and enforces data integrity through foreign keys.
-- **Why atomic transactions in `record_sale`**: A sale involves two operations — inserting a sales record and reducing stock. If either fails, both must roll back. Separate database calls cannot guarantee this. A single transaction with `FOR UPDATE` row locking ensures consistency.
-- **Why cascade delete on sales**: Deleting a product with sales history would leave orphaned records. `ON DELETE CASCADE` removes related sales automatically, maintaining referential integrity.
-- **Why DatabaseHelper abstraction**: Most queries follow the same pattern — connect, execute, commit or fetch, close. `DatabaseHelper.execute_query` handles this once. Individual class methods focus on query logic only.
-- **Why separate analytics module**: Analytics queries are reporting logic, not CRUD logic. Keeping them in `analytics/reports.py` means `sqlhandler.py` stays focused on data operations. Display logic stays in `analyticscontroller.py`.
+## Users Table
 
-## 🗂️ Module Responsibilities
+| Column | Type | Description |
+|------|------|-------------|
+| userid | INT | Primary key |
+| username | VARCHAR | Unique username |
+| name | VARCHAR | Display name |
+| password_hash | VARCHAR | Hashed password |
+| created_at | TIMESTAMP | Account creation |
 
-- `main.py`: Entry point, session check, login menu
-- `auth/login_logic.py`: Account creation, login, lockout logic
-- `auth/session_manager.py`: Save, load, clear session
-- `database/sql_handler.py`: All database classes — User, Product, Sale, Database
-- `inventory/product_manager.py`: Product CRUD user flows
-- `inventory/sales_manager.py`: Sale recording user flow
-- `analytics/reports.py`: Analytics query class, returns data only
-- `analytics/analytics_controller.py`: Analytics display, menus, formatting
-- `controller_inventory.py`: Main dashboard, low stock alert, routing
+---
 
-## ⚙️ Setup
+## Products Table
 
-### Requirements:
+| Column | Type | Description |
+|------|------|-------------|
+| productid | INT | Primary key |
+| user_id | INT | Foreign key → users |
+| product_name | VARCHAR | Product name |
+| mrp | DECIMAL | Selling price |
+| stock | INT | Available quantity |
+| profit_margin | DECIMAL | Profit per unit |
 
-- Python 3.12+
-- MySQL Server
-- `mysql-connector-python`
-- `matplotlib`
-- `pandas`
+---
 
-### Install dependencies:
+## Sales Table
+
+| Column | Type | Description |
+|------|------|-------------|
+| saleid | INT | Primary key |
+| user_id | INT | Foreign key → users |
+| product_id | INT | Foreign key → products |
+| quantity | INT | Units sold |
+| total_sale | DECIMAL | Quantity × MRP |
+| total_profit | DECIMAL | Quantity × margin |
+| sale_time | TIMESTAMP | Sale timestamp |
+
+---
+
+# 🏗️ Architecture
+
+The system follows a **layered architecture**:
+
+```
+Frontend (HTML + JavaScript)
+        ↓
+API Layer (FastAPI)
+        ↓
+Business Logic
+        ↓
+Database Layer (MySQL)
+```
+
+Each layer has a clear responsibility:
+
+| Layer | Responsibility |
+|------|----------------|
+| Frontend | User interface, sends API requests, renders dashboard |
+| API Layer | Handles HTTP requests and routes them to backend logic |
+| Business Logic | Implements inventory rules, validation, and workflows |
+| Database Layer | Stores users, products, and sales data in MySQL |
+
+---
+
+# 📁 Project Structure
+
+| Folder/File | Description |
+|-------------|-------------|
+| `main.py` | FastAPI entry point that mounts frontend and exposes API routes |
+| `auth/` | Handles login, registration, and JWT token logic |
+| `database/` | MySQL connection and SQL query handlers |
+| `inventory/` | Product and sales management logic |
+| `analytics/` | Analytics queries and reporting logic |
+| `frontend/` | All HTML, CSS, and JavaScript files |
+| `requirements.txt` | Python dependencies |
+
+---
+
+# ⚙️ Setup
+
+## Requirements
+
+| Tool | Version |
+|-----|--------|
+| Python | 3.12+ |
+| MySQL | 8+ |
+| FastAPI | Latest |
+| Uvicorn | Latest |
+
+---
+
+## Install Dependencies
+
 ```bash
-pip install mysql-connector-python matplotlib pandas
+pip install -r requirements.txt
+
+# 🔐 Environment Variables
+
+Create a `.env` file in the project root.
+
+```env
+DB_HOST=your_host
+DB_PORT=your_port
+DB_USER=your_user
+DB_PASSWORD=your_password
+DB_NAME=your_database
+
+SECRET_KEY=your_secret_key
+ALGORITHM=HS256
+```
+
+---
+
+# ▶️ Running the Application
+
+Start the backend server:
+
+```bash
+uvicorn main:app --reload
+```
+
+Open the application in your browser:
+
+```
+http://127.0.0.1:8000
+```
+
+---
+
+# 🌐 Deployment
+
+| Component | Platform |
+|----------|----------|
+| Backend API | Render |
+| Database | Aiven MySQL |
+| Frontend | Served by FastAPI |
 
 
-## Database setup:
+# 🌍 Live Demo
 
-1. **Create a MySQL database:**
-    ```sql
-    CREATE DATABASE inventory_manager;
-    ```
+https://inventory-manager-fs9t.onrender.com
 
-2. **Configure connection: Create `database/connection.py`:**
-    ```python
-    import mysql.connector
-
-    def get_connection():
-        return mysql.connector.connect(
-            host="localhost",
-            user="your_username",
-            password="your_password",
-            database="inventory_manager"
-        )
-    ```
-   Tables are created automatically on first run.
-
-## 🚀 Future Plans
-
-- **Matplotlib graphs** — daily sales trend, profit distribution, product popularity
-- **Time-based analytics** — daily, weekly, monthly reports
-- **Stock replenishment feature** — add stock to existing products
-- **FastAPI wrapper** — expose system as REST API
-- **Cloud MySQL** — move database to cloud for 24/7 access
-- **Deployment** — host on Railway or Render
-
-## 👤 Author
-
-- **Ayush Tiwari**
-- [GitHub](https://github.com/ayushtiwari-dev-coder)
-
-## 📄 License
-
-MIT License
+> **Note:**  
+> The application backend is hosted on **Render's free tier**.  
+> Free Render services automatically go to sleep after a period of inactivity.  
+> When you open the link for the first time, the server may take **30–60 seconds to wake up** before the application loads.  
+> After it wakes up, the application will respond normally.
 
 
+---
 
+# 🔮 Future Improvements
+
+| Feature | Description |
+|--------|-------------|
+| Analytics Dashboard | Graphs for sales and revenue |
+| Sales Reports | Time-based reports (daily / monthly) |
+| Receipt Generation | Printable sales receipts |
+| Pagination | Handle large product lists |
+| Stock Refill System | Add stock to existing items |
+
+---
+
+# 👤 Author
+
+**Ayush Tiwari**
+
+GitHub:  
+https://github.com/ayushtiwari-dev-coder

@@ -176,5 +176,5 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// 5. Run it!
+
 loadProducts();
