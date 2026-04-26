@@ -1,7 +1,7 @@
 import { getToken } from "./helping.js";
 import "./products.js"
 import { loadSales,loadDailySummary } from "./sales.js";
-import "./profile.js"
+import {loadprofile} from "./profile.js"
 import { checkLowStock } from "./analytics.js";
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -36,6 +36,10 @@ document.addEventListener("DOMContentLoaded", () => {
         activeSection.classList.add("active-section");
     }
 
+    if(lastPage=="profile-page"){
+        loadprofile();
+    }
+
     if(lastPage === "sales-page"){
         loadDailySummary();
         loadSales();
@@ -64,6 +68,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if(target === "sales-page"){
                 loadDailySummary();
                 loadSales();
+            
+            }
+            if(target=="profile-page"){
+                loadprofile();
             }
 
         });
