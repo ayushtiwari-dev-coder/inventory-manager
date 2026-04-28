@@ -96,6 +96,7 @@ async function handle_login(e) {
         } else {
             // ERROR HANDLING 
             const errorinfo=result.detail
+            console.log("hello")
             if (errorinfo.message === "Account locked") {
                 const minutes = Math.floor(errorinfo.time_left / 60);
                 const seconds = errorinfo.time_left % 60;
@@ -110,7 +111,7 @@ async function handle_login(e) {
         }
     } catch (error) {
         console.error("Connection Error:", error);
-        alert("Server is OFF. Start your Uvicorn/Gunicorn server first!");
+        alert("Server is OFF.");
     }
 }
 

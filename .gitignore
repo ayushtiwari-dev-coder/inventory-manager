@@ -16,6 +16,7 @@ venv/
 update_aiven.py
 bundle.py
 inventory_full_context.txt
+load_test.py
 
 # local experiment files
 cfpm/
