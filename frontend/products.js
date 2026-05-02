@@ -1,12 +1,4 @@
-// ============================================================
-// products.js — Product table + sale-mode-aware rendering
-// CHANGES:
-//   - Removed embedded sale/cart logic (moved to sales.js)
-//   - Added renderProductsInSaleMode() / renderProductsNormal()
-//   - Row clicks in sale mode call toggleCartItem() from sales.js
-//   - Edit/Delete buttons hidden during sale mode
-//   - No modal operations allowed during sale mode
-// ============================================================
+
 
 import {
     apiRequest,
@@ -27,11 +19,11 @@ import {
     isInCart
 } from "./sales.js";
 
-// ── Module state ─────────────────────────────────────────────
+// Module state 
 let selectedProductId = null;
 let _productsCache = [];   // last fetched products list
 
-// ── Product API actions ──────────────────────────────────────
+//Product API actions
 const Product = {
     add: async () => {
         const product_name = document.getElementById("product-name").value;
@@ -67,7 +59,7 @@ const Product = {
     }
 };
 
-// ── Load + render (STATE 1 — normal) ────────────────────────
+// Load + render (STATE 1 — normal)
 
 export async function loadProducts() {
     try {
@@ -89,9 +81,7 @@ export async function loadProducts() {
     }
 }
 
-/**
- * STATE 1 rendering — full Edit / Sell / Delete buttons visible.
- */
+
 export function renderProductsNormal() {
     const table = document.getElementById("products-list-body");
     if (!table) return;
@@ -118,10 +108,6 @@ export function renderProductsNormal() {
     table.innerHTML = html;
 }
 
-/**
- * STATE 2 rendering — rows are selectable, no Edit/Delete buttons.
- * Selected rows get .selected class; clicking toggles cart membership.
- */
 export function renderProductsInSaleMode() {
     const table = document.getElementById("products-list-body");
     if (!table) return;
@@ -165,7 +151,7 @@ export function renderProductsInSaleMode() {
     });
 }
 
-// ── Unified event listener (STATE 1 only actions) ────────────
+//  Unified event listener (STATE 1 only actions) 
 
 document.addEventListener("click", (e) => {
     // Block all modal/edit/delete actions while in sale mode
@@ -183,7 +169,7 @@ document.addEventListener("click", (e) => {
             if (confirmed) {
                 Product.delete().then(res => {
                     if (res.status === "success") {
-                        loadProducts();
+                        document.dispatchEvent(new Event("reloadProducts"));
                     }
                 });
             }
@@ -240,5 +226,5 @@ document.addEventListener("exitSaleMode", () => {
     renderProductsNormal();
 });
 document.addEventListener("reloadProducts", () => {
-    loadProducts();
+    loadProducts()
 });

@@ -4,6 +4,9 @@ import { loadSales,loadDailySummary } from "./sales.js";
 import {loadprofile} from "./profile.js"
 import { checkLowStock } from "./analytics.js";
 
+
+
+
 document.addEventListener("DOMContentLoaded", async () => {
 
     const token = getToken();

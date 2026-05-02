@@ -1,10 +1,4 @@
-// ============================================================
-// sales.js — Cart + Sale State Machine
-// CHANGES: Full rewrite of sale mode logic into 3 states.
-//   STATE 1: Normal mode (managed by products.js)
-//   STATE 2: Sale mode — rows selectable, cart accumulates
-//   STATE 3: Cart view — quantity editable, submit/back
-// ============================================================
+
 
 import { apiRequest, closeModal, clearInputs } from "./helping.js";
 
@@ -13,9 +7,9 @@ import { apiRequest, closeModal, clearInputs } from "./helping.js";
 let _saleMode = false;
 let _cart = [];   // [{ product_id, product_name, stock, quantity }]
 
-// ── State accessors (exported so products.js can read them) ─
+
 export function getSaleMode() { return _saleMode; }
-export function getCart()     { return _cart; }
+export function getCart() { return _cart; }
 
 // ── Enter / Exit sale mode ───────────────────────────────────
 
@@ -36,11 +30,7 @@ export function exitSaleMode() {
 
 // ── Cart manipulation ────────────────────────────────────────
 
-/**
- * Called by products.js when a row is clicked in sale mode.
- * Toggles the product in/out of the cart (quantity starts at 1).
- * Returns true if product was ADDED, false if REMOVED.
- */
+
 export function toggleCartItem(productId, productName, stock) {
     const idx = _cart.findIndex(p => p.product_id === parseInt(productId));
     if (idx !== -1) {
@@ -61,22 +51,26 @@ export function isInCart(productId) {
     return _cart.some(p => p.product_id === parseInt(productId));
 }
 
-// ── Cart view (STATE 3) ──────────────────────────────────────
+// Cart view (STATE 3)
 
 export function showCartView() {
+
     if (_cart.length === 0) {
         alert("Your cart is empty. Click product rows to add items.");
         return;
     }
+
     _renderCartTable();
-    document.getElementById("products-page").style.display = "none";
-    document.getElementById("cart-view").style.display = "block";
+
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active-section"));
+    document.getElementById("cart-view").classList.add("active-section");
 }
 
 function _hideCartView() {
-    const cartView = document.getElementById("cart-view");
-    if (cartView) cartView.style.display = "none";
-    document.getElementById("products-page").style.display = "block";
+
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active-section"));
+    document.getElementById("products-page").classList.add("active-section");
+
 }
 
 function _renderCartTable() {
@@ -119,7 +113,7 @@ function _renderCartTable() {
             const maxStock = _cart[idx].stock;
 
             if (isNaN(val) || val < 1) { val = 1; e.target.value = 1; }
-            if (val > maxStock)         { val = maxStock; e.target.value = maxStock; }
+            if (val > maxStock) { val = maxStock; e.target.value = maxStock; }
 
             _cart[idx].quantity = val;
         });
@@ -133,7 +127,7 @@ function _renderCartTable() {
             if (_cart.length === 0) {
                 // Auto-go back if cart becomes empty
                 _hideCartView();
-                document.getElementById("products-page").style.display = "block";
+
             } else {
                 _renderCartTable();
             }
@@ -141,7 +135,7 @@ function _renderCartTable() {
     });
 }
 
-// ── Submit sale ──────────────────────────────────────────────
+// Submit sale 
 
 export async function submitCart() {
     if (_cart.length === 0) {
@@ -163,7 +157,7 @@ export async function submitCart() {
 
     const items = _cart.map(p => ({
         product_id: p.product_id,
-        quantity:   p.quantity
+        quantity: p.quantity
     }));
 
     try {
@@ -184,23 +178,23 @@ export async function submitCart() {
     }
 }
 
-// ── UI helpers ───────────────────────────────────────────────
+// UI helpers
 
 function _showSaleModeUI() {
     // Show the Cart and Cancel-Sale buttons; hide Add Product
-    _el("btn-add-product-modal").style.display  = "none";
-    _el("btn-start-sale").style.display          = "none";
-    _el("btn-view-cart").style.display           = "inline-block";
-    _el("btn-cancel-sale").style.display         = "inline-block";
-    _el("sale-mode-banner").style.display        = "block";
+    _el("btn-add-product-modal").style.display = "none";
+    _el("btn-start-sale").style.display = "none";
+    _el("btn-view-cart").style.display = "inline-block";
+    _el("btn-cancel-sale").style.display = "inline-block";
+    _el("sale-mode-banner").style.display = "block";
 }
 
 function _showNormalUI() {
-    _el("btn-add-product-modal").style.display  = "inline-block";
-    _el("btn-start-sale").style.display          = "inline-block";
-    _el("btn-view-cart").style.display           = "none";
-    _el("btn-cancel-sale").style.display         = "none";
-    _el("sale-mode-banner").style.display        = "none";
+    _el("btn-add-product-modal").style.display = "inline-block";
+    _el("btn-start-sale").style.display = "inline-block";
+    _el("btn-view-cart").style.display = "none";
+    _el("btn-cancel-sale").style.display = "none";
+    _el("sale-mode-banner").style.display = "none";
 }
 
 function _el(id) {
@@ -209,16 +203,16 @@ function _el(id) {
     return el || { style: {} }; // safe fallback
 }
 
-// ── Revenue + Recent Sales (unchanged from original) ─────────
+// Revenue + Recent Sales  
 
 export async function loadDailySummary() {
     try {
         const result = await apiRequest("/analytics/revenue?period=daily", "GET");
         if (result.status === "success") {
             const revenue = result.data.total_revenue || 0;
-            const profit  = result.data.total_profit  || 0;
+            const profit = result.data.total_profit || 0;
             document.getElementById("val-daily-revenue").innerText = "₹" + revenue;
-            document.getElementById("val-daily-profit").innerText  = "₹" + profit;
+            document.getElementById("val-daily-profit").innerText = "₹" + profit;
         }
     } catch (err) {
         console.error("loadDailySummary:", err.message);
@@ -254,18 +248,18 @@ function _renderSales(sales) {
     table.innerHTML = html;
 }
 
-// ── DOMContentLoaded: wire up Cart-view buttons ───────────────
+//DOMContentLoaded: wire up Cart-view buttons 
 
 document.addEventListener("DOMContentLoaded", () => {
-    // "Start Sale" button — enters STATE 2
+    // "Start Sale" buttons enters STATE 2
     const startBtn = document.getElementById("btn-start-sale");
     if (startBtn) startBtn.addEventListener("click", () => enterSaleMode());
 
-    // "View Cart" button — enters STATE 3
+    // "View Cart" button enters STATE 3
     const cartBtn = document.getElementById("btn-view-cart");
     if (cartBtn) cartBtn.addEventListener("click", () => showCartView());
 
-    // "Cancel Sale" button — exits back to STATE 1
+    // "Cancel Sale" button exits back to STATE 1
     const cancelBtn = document.getElementById("btn-cancel-sale");
     if (cancelBtn) cancelBtn.addEventListener("click", () => exitSaleMode());
 
@@ -273,11 +267,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const submitBtn = document.getElementById("btn-cart-submit");
     if (submitBtn) submitBtn.addEventListener("click", () => submitCart());
 
-    // "Back" inside cart view — returns to STATE 2 (product table)
+    // "Back" inside cart view returns to STATE 2 (product table)
     const backBtn = document.getElementById("btn-cart-back");
     if (backBtn) backBtn.addEventListener("click", () => {
         _hideCartView();
-        document.getElementById("products-page").style.display = "block";
+
     });
 
     // Sales page submit-cart button (kept for backward compat)
