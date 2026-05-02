@@ -45,7 +45,6 @@ async function handle_register(e) {
         username,
         password
     });
-    console.log("button clicked")
     setLoading(btn, true);
     
 
@@ -96,7 +95,6 @@ async function handle_login(e) {
         } else {
             // ERROR HANDLING 
             const errorinfo=result.detail
-            console.log("hello")
             if (errorinfo.message === "Account locked") {
                 const minutes = Math.floor(errorinfo.time_left / 60);
                 const seconds = errorinfo.time_left % 60;
@@ -106,7 +104,7 @@ async function handle_login(e) {
                 alert(`WRONG PASSWORD: You have ${errorinfo.attempts_left} attempts remaining before your account is locked.`);
             } 
             else {
-                alert("Login Failed: " + (result.detail || result.message || "Check your credentials"));
+                alert("Login Failed: " + (errorinfo?.message || "Check your credentials"));
             }
         }
     } catch (error) {
