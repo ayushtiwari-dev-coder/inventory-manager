@@ -1,0 +1,1263 @@
+
+
+############################################################
+ LOCATION: controller_inventory.py
+############################################################
+
+from inventory.product_manager import product_manager
+from inventory.sales_manager import sales_manager
+from database.sql_handler import Database,Product
+from auth.session_manager import clear_session
+from analytics.analytics_controller import analytics_dashboard
+
+
+def inventory_system(user_id):
+    show_low_stock_alert(user_id,threshold=40)
+    try:
+        while True:
+
+            print("\nINVENTORY MANAGER")
+            print("1. Product Manager")
+            print("2. Sales Manager")
+            print("3.Analytics")
+            print("4. Exit")
+            print("5.logout")
+
+            choice = input("Enter your choice: ").strip()
+
+            if choice == "1":
+                product_manager(user_id)
+
+            elif choice == "2":
+                sales_manager(user_id)
+
+            elif choice == "3":
+                analytics_dashboard(user_id)
+
+            elif choice=="4":
+                print("come back soon")
+                exit()
+
+            elif choice=="5":
+                print("logging out")
+                clear_session()
+                break
+            
+            else:
+                print("Invalid option")
+
+    except Exception as e:
+        print("\nSYSTEM ERROR OCCURRED")
+        print("Please try again.")
+        print(f"Error details: {e}")
+
+def show_low_stock_alert(user_id, threshold=40):
+    low_stock = Product.get_all_products(user_id, low_stock_threshold=threshold)
+    if low_stock:
+        print("\n⚠ LOW STOCK ALERT")
+        print("-" * 40)
+        for product in low_stock:
+            print(f"{product['product_name']} — {product['stock']} units remaining")
+        print("-" * 40)
+
+
+
+############################################################
+ LOCATION: main.py
+############################################################
+
+from database.sql_handler import Database,User
+from auth.login_logic import create_account, login
+from controller_inventory import inventory_system
+from auth.session_manager import load_session,save_session
+Database.create_tables()
+session=load_session()
+if session:
+    print("\n welcome back")
+    inventory_system(session["user_id"])
+while True:
+    
+    print("\n" + "="*45)
+    print("LOGIN SYSTEM")
+    print("="*45)
+
+    print("\n1. Create Account")
+    print("2. Login")
+    print("3. Exit\n")
+
+    choice = input("Enter your choice: ").strip()
+
+    if choice == "1":
+        user_id,name = create_account()
+        save_session({"user_id":user_id , "name":name})
+        print("\nAccount created.")
+        inventory_system(user_id)
+
+    elif choice == "2":
+        user_id = login() 
+        if user_id:
+            user=User.get_user_by_id(user_id)
+            save_session({"user_id":user_id , "name":user["name"]})
+            inventory_system(user_id)  
+        else:
+            print("Too many wrong attempts. Account locked.")
+            
+
+    elif choice == "3":
+        print("Exiting program.")
+        break
+
+    else:
+        print("Invalid option.")
+
+############################################################
+ LOCATION: analytics\analytics_controller.py
+############################################################
+
+from analytics.report import analytics,analyticsFlow
+
+def analytics_dashboard(user_id):
+    while True:
+        print("\nANALYTICS")
+        print("1. Stock Overview")
+        print("2.most selling products")
+        print("3.lowest selling products")
+        print("4. revenue")
+        print("5. Graphs")
+        print("6. exit")
+
+        choice = input("Enter your choice: ").strip()
+
+        if choice == "1":
+            analytics.stock_overview(user_id)
+
+        elif choice=="2":
+            analyticsFlow.top_products_by_profit_flow(user_id)
+
+        elif choice == "3":
+            analyticsFlow.low_selling_by_product_sold_flow(user_id)
+
+        elif choice=="4":
+            analyticsFlow.revenue_summary_flow(user_id)
+
+        elif choice == "5":
+            analyticsFlow.sales_trend_flow(user_id)
+
+        elif choice == "6":
+            break
+
+        else:
+            print("Invalid option")
+
+############################################################
+ LOCATION: analytics\graph.py
+############################################################
+
+import matplotlib.pyplot as plt
+
+class graph:
+    @staticmethod
+    def revenue_graph(dates,revenue,months):
+        plt.figure(figsize=(10,5))
+        plt.plot(dates,revenue,marker="o",color="blue",label="Revenue")
+        plt.title(f"Revenue--LAST {months} months")
+        plt.xlabel("dates")
+        plt.ylabel("Amount")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.legend()
+        plt.show()
+    @staticmethod
+    def profit_graph(dates,profit,months):
+        plt.figure(figsize=(10,5))
+        plt.plot(dates,profit,marker="o",color="blue",label="Revenue")
+        plt.title(f"Profit--LAST {months} months")
+        plt.xlabel("dates")
+        plt.ylabel("Amount")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.legend()
+        plt.show()
+
+############################################################
+ LOCATION: analytics\report.py
+############################################################
+
+from database.sql_handler import Product,DatabaseHelper
+from analytics.graph import graph
+class analytics:
+    def stock_overview(user_id):
+        products = Product.get_all_products(user_id, sort_by_stock=True)
+        
+        if not products:
+            print("No products found.")
+            return
+        
+        print("\nSTOCK OVERVIEW")
+        print("-" * 50)
+        print(f"{'Product':<20} {'Stock':>10} {'MRP':>10}")
+        print("-" * 50)
+        
+        for p in products:
+            print(f"{p['product_name']:<20} {p['stock']:>10} {p['mrp']:>10}")
+        
+        print("-" * 50)
+    @staticmethod
+    def top_products_by_profit(user_id,limit=10):
+        query="""
+        SELECT p.product_name,SUM(s.total_profit) AS total_profit,SUM(s.quantity) AS total_quantity
+        from sales s
+        JOIN products p ON s.product_id=p.product_id
+        WHERE s.user_id=%s
+        GROUP BY p.product_name
+        ORDER BY total_profit DESC
+        limit %s
+        """
+        return DatabaseHelper.execute_query(query,(user_id,limit),fetch_type=1)
+
+    @staticmethod
+    def least_sold_products(user_id,limit=10):
+        query="""
+        SELECT p.product_name,SUM(s.total_profit) AS total_profit,SUM(s.quantity) AS total_quantity
+        from sales s
+        JOIN products p ON s.product_id=p.product_id
+        WHERE s.user_id=%s
+        GROUP BY p.product_name
+        ORDER BY total_quantity ASC
+        limit %s
+        """
+        return DatabaseHelper.execute_query(query,(user_id,limit),fetch_type=1)
+
+    @staticmethod
+    def revenue_summary(user_id,period=None):
+        if period=="daily":
+            date_filter="AND DATE(sale_time)=CURDATE()"
+        elif period=="monthly":
+            date_filter="AND MONTH(sale_time)=MONTH(CURDATE()) AND YEAR(sale_time)=YEAR(CURDATE())"
+        elif period=="yearly":
+            date_filter="AND YEAR(sale_time)=YEAR(CURDATE())"
+        elif period=="weekly":
+            date_filter="AND WEEK(sale_time)=WEEK(CURDATE()) AND YEAR(sale_time)=YEAR(CURDATE())"
+        else:
+            date_filter=""
+
+        query=f"""
+        SELECT
+        COUNT(sale_id) AS total_transactions,
+        SUM(total_sale) AS total_revenue,
+        SUM(total_profit) AS total_profit
+        FROM sales
+        WHERE user_id=%s
+        {date_filter}
+        """        
+        return DatabaseHelper.execute_query(query,(user_id,),fetch_type=2)
+    
+    def sales_trend(user_id,months=4):
+        query="""
+        SELECT
+        DATE(sale_time) AS sale_date,
+        SUM(total_sale) AS revenue,
+        SUM(total_profit) AS profit
+        FROM sales
+        WHERE user_id=%s
+        AND sale_time>=DATE_SUB(CURDATE(), INTERVAL %s MONTH)
+        GROUP BY DATE(sale_time)
+        ORDER BY sale_date DESC
+        """
+        return DatabaseHelper.execute_query(query,(user_id,months),fetch_type=1)
+
+
+
+
+
+class analyticsFlow:
+    @staticmethod
+    def top_products_by_profit_flow(user_id):
+        results = analytics.top_products_by_profit(user_id)
+        
+        if not results:
+            print("No sales data found.")
+            return
+        
+        print("\nTOP PRODUCTS BY PROFIT")
+        print("-" * 50)
+        print(f"{'Product':<25} {'qty sold':>10} {'Total Profit':>15}")
+        print("-" * 50)
+        
+        for row in results:
+            print(f"{row['product_name']:<20} {row['total_quantity']:>10} {row['total_profit']:>15}")
+        
+        print("-" * 45)
+
+    @staticmethod
+    def low_selling_by_product_sold_flow(user_id):
+        results = analytics.least_sold_products(user_id)
+        
+        if not results:
+            print("No sales data found.")
+            return
+        
+        print("\nTOP PRODUCTS BY PROFIT")
+        print("-" * 50)
+        print(f"{'Product':<25} {'qty sold':>10} {'Total Profit':>15}")
+        print("-" * 50)
+        
+        for row in results:
+            print(f"{row['product_name']:<20} {row['total_quantity']:>10} {row['total_profit']:>15}")
+        
+        print("-" * 45)
+
+    @staticmethod
+    def revenue_summary_flow(user_id):
+        print("\n1. Daily")
+        print("2. Monthly")
+        print("3. Yearly")
+        print("4.Weekly")
+        
+        choice = input("Select period: ").strip()
+        
+        if choice == "1":
+            period = "daily"
+        elif choice == "2":
+            period = "monthly"
+        elif choice == "3":
+            period = "yearly"
+        elif choice=="4":
+            period="weekly"
+        else:
+            print("Invalid option")
+            return
+        
+        result = analytics.revenue_summary(user_id, period)
+        
+        if not result or result.get("total_transactions") == 0:
+            print("No sales data found for this period.")
+            return
+        
+        print(f"\n{period.upper()} SUMMARY")
+        print("-" * 40)
+        print(f"Total Transactions : {result['total_transactions']}")
+        print(f"Total Revenue      : {result['total_revenue']}")
+        print(f"Total Profit       : {result['total_profit']}")
+        print("-" * 40)
+
+    @staticmethod
+    def sales_trend_flow(user_id):
+        while True:
+            print("\n1. last 4 months")
+            print("2. last 8 months")
+            print("3. last 1 year")
+            print("4. last 2 year")
+            
+            
+            choice = input("Select period or ('type exit'): ").strip()
+
+            if choice=="exit":
+                break
+            if choice == "1":
+                months=4
+            elif choice == "2":
+                months=8
+            elif choice == "3":
+                months=12
+            elif choice=="4":
+                months=24
+            else:
+                print("Invalid option")
+                break
+            results=analytics.sales_trend(user_id,months)
+            if not results:
+                print("no sales data found ")
+                return
+
+            dates=[row["sale_date"] for row in results]
+            revenue=[row["revenue"] for row in results]
+            profit=[row["profit"] for row in results]
+
+            print("\n1.REVENUE GRAPH")
+            print("2.PROFIT GRAPH")
+
+            graph_choice=input("enter your choice or (type exit): ")
+
+            if graph_choice=="exit":
+                return
+            if graph_choice=="1":
+                graph.revenue_graph(dates,revenue,months)
+                
+            elif graph_choice=="2":
+                graph.profit_graph(dates,profit,months)
+            else:
+                print("invalid input")
+                continue
+
+############################################################
+ LOCATION: auth\login_logic.py
+############################################################
+
+import time
+from security.hashing import hashing_password
+from database.sql_handler import User, Product
+
+def password_attempt(username):
+    user = User.get_user(username)  # Calling User class method
+    attempts = 0
+
+    while attempts < 3:
+        password = input("Enter your password:")
+
+        if user["password_hash"] == hashing_password(password):
+            print("Login successfully")
+            return user["user_id"]
+
+        else:
+            print("Wrong password, try again")
+            attempts += 1
+
+    lock_until = int(time.time()) + 300
+    User.update_lock(username, lock_until)  # Calling User class method to update lock
+
+    return None
+
+
+def setup_name(username):
+    user = User.get_user(username)  # Calling User class method
+
+    print("\n" + "=" * 40)
+    print("PROFILE SETUP")
+    print("=" * 40)
+
+    while True:
+        name = input("Enter your name: ").title().strip()
+        error = False
+
+        if name == "":
+            print("Name cannot be empty")
+            error = True
+
+        if len(name) > 25:
+            print("Name is too long")
+            error = True
+
+        if not name.replace(" ", "").isalnum():
+            print("Name should only contain alphabet and numbers")
+            error = True
+
+        if not error:
+            User.update_name(username, name)  # Calling User class method to update name
+            return name
+
+
+def create_account():
+    while True:
+        username = input("Enter username: ").strip().lower()
+        error = False
+
+        if username == "":
+            print("Username cannot be empty")
+            error = True
+        if " " in username:
+            print("Username cannot contain spaces")
+            error = True
+        if len(username) > 20:
+            print("Username too long")
+            error = True
+        if not username.replace("_", "").replace("-", "").isalnum():
+            print("Username can only contain letters, numbers, _ and -")
+            error = True
+        if User.get_user(username):  # Calling User class method
+            print("Username already exists")
+            error = True
+
+        if error:
+            continue
+
+        print("Username available")
+
+        while True:
+            password = input("Enter password:")
+            error = False
+
+            if len(password) < 8:
+                print("Password too short")
+                error = True
+            if len(password) > 32:
+                print("Password too long")
+                error = True
+            if not any(c.isupper() for c in password):
+                print("Password needs uppercase")
+                error = True
+            if not any(c.isdigit() for c in password):
+                print("Password needs number")
+                error = True
+            if not any(not c.isalnum() for c in password):
+                print("Password needs special char")
+                error = True
+            if " " in password:
+                print("No spaces allowed")
+                error = True
+
+            if not error:
+                password_hash = hashing_password(password)
+                User.create_user(username, password_hash)  # Calling User class method to create user
+
+                name = setup_name(username)
+                User.update_name(username,name)
+                print("Account created successfully")
+
+                user = User.get_user(username)  # Fetch user after creation
+                return user["user_id"],user["name"]  # Return the user_id of the created user
+
+
+def login():
+    while True:
+        username = input("Enter your username:")
+        user = User.get_user(username)  # Calling User class method
+
+        if not user:
+            print("Username does not exist")
+            continue
+
+        lock_until = user["lock_until"]
+        current_time = int(time.time())
+
+        if current_time < lock_until:
+            print("Account locked")
+            print("Time left:", lock_until - current_time)
+            return None
+
+        user_id = password_attempt(username)
+
+        if user_id:
+            return user_id  # Return user_id after successful login
+        else:
+            return None
+
+############################################################
+ LOCATION: auth\session_manager.py
+############################################################
+
+import os
+import pickle
+
+# Path for the session file
+SESSION_FILE = "auth/session.pkl"
+
+# Save the user session (username)
+def save_session(username):
+    with open(SESSION_FILE, "wb") as session_file:
+        pickle.dump(username, session_file)
+
+# Load the user session
+def load_session():
+    if os.path.exists(SESSION_FILE):
+        with open(SESSION_FILE, "rb") as session_file:
+            username = pickle.load(session_file)
+            return username
+    return None
+
+# Clear the user session (log out)
+def clear_session():
+    if os.path.exists(SESSION_FILE):
+        os.remove(SESSION_FILE)
+
+############################################################
+ LOCATION: database\connection.py
+############################################################
+
+from dotenv import load_dotenv
+import os
+import mysql.connector
+
+load_dotenv()
+
+def get_connection():
+    try:
+        db=mysql.connector.connect(
+            host=os.getenv("DB_HOST"),
+            user=os.getenv("DB_USER"),
+            password=os.getenv("DB_PASSWORD"),
+            database=os.getenv("DB_NAME"),
+        )
+        return db
+    except mysql.connector.Error as err:
+        print("database connection failed",err)
+        return None
+
+############################################################
+ LOCATION: database\sql_handler.py
+############################################################
+
+from database.connection import get_connection
+from mysql.connector import errors
+
+class DatabaseHelper:
+    @staticmethod
+    def execute_query(query, params=None, fetch_type=None):
+        db = get_connection()
+        cursor = None
+
+        try:
+            cursor=db.cursor(dictionary=True)
+            cursor.execute(query, params if params else ())
+            if fetch_type==1:
+                return cursor.fetchall() or []
+            elif fetch_type==2:
+                return cursor.fetchone() or {}
+            else:
+                db.commit()
+                if cursor.rowcount==0:
+                    return{"status":"not_found"}
+                return {"status":"success"}
+        except errors.IntegrityError as e:
+            db.rollback()
+            return {"status": "error", "message": str(e)}
+        finally:
+            if cursor:cursor.close()
+            if db: db.close()
+
+class User:
+    @staticmethod
+    def create_user(username, password_hash):
+        query = """
+        INSERT INTO users (username, password_hash)
+        VALUES (%s, %s)
+        """
+        return DatabaseHelper.execute_query(query, (username, password_hash))
+    
+    @staticmethod
+    def get_user_by_id(user_id):
+        query = """
+        SELECT user_id, username, name, lock_until
+        FROM users
+        WHERE user_id= %s
+        """
+        return DatabaseHelper.execute_query(query, (user_id,), fetch_type=2)
+
+    @staticmethod
+    def get_user(username):
+        query = """
+        SELECT user_id, username, password_hash, name, lock_until
+        FROM users
+        WHERE username = %s
+        """
+        return DatabaseHelper.execute_query(query, (username,), fetch_type=2)
+
+    @staticmethod
+    def update_lock(username, lock_until):
+        query = """
+        UPDATE users
+        SET lock_until = %s
+        WHERE username = %s
+        """
+        return DatabaseHelper.execute_query(query, (lock_until, username))
+
+    @staticmethod
+    def update_name(username, name):
+        query = """
+        UPDATE users
+        SET name = %s
+        WHERE username = %s
+        """
+        return DatabaseHelper.execute_query(query, (name, username))
+
+class Product:
+    @staticmethod
+    def add_product(user_id, product_name, mrp, stock, profit_margin):
+        if profit_margin >= mrp:
+            return {"status": "invalid_margin"}
+        if mrp <= 0 or stock < 0:
+            return {"status": "invalid_input"}
+
+        query = """
+        INSERT INTO products (user_id, product_name, mrp, stock, profit_margin)
+        VALUES (%s, %s, %s, %s, %s)
+        """
+        result=DatabaseHelper.execute_query(query, (user_id, product_name, mrp, stock, profit_margin))
+        if result.get("status")=="error":
+            return {"status":"duplicate_product"}
+        return result
+
+
+    @staticmethod
+    def get_all_products(user_id, low_stock_threshold=None, sort_by_stock=False):
+        
+        if low_stock_threshold is not None:
+            query = """
+            SELECT product_id, product_name, mrp, stock, profit_margin
+            FROM products
+            WHERE user_id = %s AND stock < %s
+            ORDER BY stock ASC
+            """
+            params = (user_id, low_stock_threshold)
+        
+        elif sort_by_stock:
+            query = """
+            SELECT product_id, product_name, mrp, stock, profit_margin
+            FROM products
+            WHERE user_id = %s
+            ORDER BY stock DESC
+            """
+            params = (user_id,)
+        
+        else:
+            query = """
+            SELECT product_id, product_name, mrp, stock, profit_margin
+            FROM products
+            WHERE user_id = %s
+            ORDER BY product_name ASC
+            """
+            params = (user_id,)
+
+        return DatabaseHelper.execute_query(query, params, fetch_type=1)
+
+    @staticmethod
+    def update_product_price(user_id, product_id, new_mrp):
+        if new_mrp <= 0:
+            return {"status": "invalid_mrp"}
+        query = """
+        UPDATE products
+        SET mrp = %s
+        WHERE user_id = %s AND product_id = %s
+        """
+        return DatabaseHelper.execute_query(query, (new_mrp, user_id, product_id))
+
+    @staticmethod
+    def update_profit_margin(user_id, product_id, new_margin):
+        query = """
+        UPDATE products
+        SET profit_margin = %s
+        WHERE user_id = %s AND product_id = %s
+        """
+        return DatabaseHelper.execute_query(query, (new_margin, user_id, product_id))
+
+    @staticmethod
+    def delete_product(user_id, product_id):
+        query = """
+        DELETE FROM products
+        WHERE user_id = %s AND product_id = %s
+        """
+        return DatabaseHelper.execute_query(query, (user_id, product_id))
+    @staticmethod
+    def update_stock(user_id,product_id,change):
+        if change==0:
+            return{"status":"invalid_input"}
+
+        db=None
+        cursor=None
+        
+        query_fetch="""
+        SELECT stock FROM products
+        WHERE user_id=%s AND product_id=%s
+        FOR UPDATE
+        """
+        try:
+            db=get_connection()
+            cursor=db.cursor(dictionary=True)
+            cursor.execute(query_fetch,(user_id,product_id))
+            product=cursor.fetchone()
+            if not product:
+                return {"status":"not_found"}
+            if product["stock"]+change<0:
+                return{"status":"insufficient_stock"}                                            
+
+            query_update="""
+            UPDATE products
+            SET stock=stock+%s
+            WHERE user_id=%s AND product_id=%s
+            AND stock + %s>=0
+            """
+            cursor.execute(query_update, (change,user_id, product_id,change))
+            db.commit()
+            if cursor.rowcount==0:
+                return{"status":"not_found"}
+            return {"status":"success"}
+        except Exception:
+            if db:
+                db.rollback()
+            raise
+        finally:
+            if cursor: cursor.close()
+            if db: db.close()
+
+
+class Sale:
+    @staticmethod
+    def record_sale(user_id, product_id, quantity_sold):
+
+        if quantity_sold <= 0:
+            return {"status": "invalid_quantity"}
+
+        db = None
+        cursor = None
+
+        try:
+            db = get_connection()
+            cursor = db.cursor(dictionary=True)
+
+            fetch_query = """
+            SELECT product_id, product_name, mrp, stock,profit_margin
+            FROM products
+            WHERE user_id = %s AND product_id = %s
+            FOR UPDATE
+            """
+
+            cursor.execute(fetch_query, (user_id, product_id))
+            product = cursor.fetchone()
+
+            if not product:
+                return {"status": "invalid_product"}
+
+            if product["stock"] < quantity_sold:
+                return {"status": "insufficient_stock"}
+
+            total_sale = quantity_sold * product["mrp"]
+            total_profit=product["profit_margin"]*quantity_sold
+
+            insert_query = """
+            INSERT INTO sales(user_id, product_id, quantity, total_sale,total_profit)
+            VALUES(%s, %s, %s, %s, %s)
+            """
+
+            cursor.execute(insert_query, (user_id, product_id, quantity_sold, total_sale,total_profit))
+
+            stock_query = """
+            UPDATE products
+            SET stock = stock - %s
+            WHERE user_id = %s AND product_id = %s
+            """
+
+            cursor.execute(stock_query, (quantity_sold, user_id, product_id))
+
+            db.commit()
+
+            return {
+                "status": "success",
+                "product_name": product["product_name"],
+                "quantity": quantity_sold,
+                "total_sale": total_sale
+            }
+
+        except Exception:
+            if db:
+                db.rollback()
+            raise
+
+        finally:
+            if cursor: cursor.close()
+            if db: db.close()
+
+
+
+class Database:
+    @staticmethod
+    def create_tables():
+        db = get_connection()
+        cursor = db.cursor()
+        user_table = """
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INT AUTO_INCREMENT PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            name VARCHAR(50),
+            lock_until INT DEFAULT 0,
+            password_hash VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        """
+        product_table = """
+        CREATE TABLE IF NOT EXISTS products (
+            product_id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            product_name VARCHAR(50) NOT NULL,
+            mrp DECIMAL(10,2) NOT NULL,
+            stock INT NOT NULL,
+            profit_margin DECIMAL(5,2) NOT NULL,
+            UNIQUE(user_id, product_name),
+            FOREIGN KEY(user_id) REFERENCES users(user_id)
+        );
+        """
+        sales_table = """
+        CREATE TABLE IF NOT EXISTS sales (
+            sale_id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            product_id INT NOT NULL,
+            quantity INT NOT NULL,
+            total_profit DECIMAL(10,2) NOT NULL DEFAULT 0,
+            total_sale DECIMAL(10,2) NOT NULL,
+            sale_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(user_id),
+            FOREIGN KEY(product_id) REFERENCES products(product_id) ON DELETE CASCADE
+        );
+        """
+        cursor.execute(user_table)
+        cursor.execute(product_table)
+        cursor.execute(sales_table)
+        db.commit()
+        cursor.close()
+        db.close()
+
+############################################################
+ LOCATION: inventory\product_manager.py
+############################################################
+
+from utils.validation import valid_product_name
+from database.sql_handler import Product
+
+
+def view_products_flow(user_id,low_stock_threshold=None):
+    products = Product.get_all_products(user_id,low_stock_threshold)  # Using Product class to get all products
+
+    if not products:
+        print("\nNo products found.\n")
+        return False
+
+    print("\nPRODUCT LIST")
+    print("-" * 60)
+    print(f"{'ID':<5} {'Name':<20} {'MRP':<10} {'Stock':<10}")
+    print("-" * 60)
+
+    for product in products:
+        print(
+            f"{product['product_id']:<5} "
+            f"{product['product_name']:<20} "
+            f"{product['mrp']:<10} "
+            f"{product['stock']:<10}"
+        )
+
+    print("-" * 60)
+    return True
+
+
+def delete_products_flow(user_id):
+    if not view_products_flow(user_id):
+        return
+
+    while True:
+        try:
+            product_id = input("Enter product ID to delete or enter (q to exit) : ").strip()
+            if product_id in ["exit","q"]:
+                break
+            elif product_id.isdigit():
+                product_id=int(product_id)
+            else:
+                print("invalid input")
+                continue
+            choice=input(f"ARE u sure u want to delete product id {product_id},YOU will lose all data related to that product 1.yes or 2.no: ")
+            if choice in ["no","2"]:
+                continue
+            elif choice not in ["yes","y","1"]:
+                print("invalid input")
+                continue
+            else:
+                print("as u say")
+        except ValueError:
+            print("Invalid ID")
+            continue
+        
+        result = Product.delete_product(user_id, product_id)  # Using Product class to delete product
+        if result["status"] == "not_found":
+            print("Product not found")
+            continue
+        elif result["status"] == "success":
+            print("Product deleted successfully")
+            break
+
+
+def update_product_flow(user_id):
+    while True:
+        products = Product.get_all_products(user_id)  # Using Product class to get all products
+        if not products:
+            print("No products found.")
+            return
+        
+        print("\n1. Update product MRP")
+        print("2. Update profit margin")
+        print("3.update stock")
+        print("4. Back")
+
+        choice = input("Enter your choice: ").strip()
+
+        if choice == "4":
+            break
+
+        if choice not in ("1", "2","3"):
+            print("Invalid option")
+            continue
+
+        # Show products
+        print("\nPRODUCT LIST")
+        print("-" * 60)
+        print(f"{'ID':<5} {'Name':<20} {'MRP':<10} {'Stock':<10}")
+        print("-" * 60)
+
+        for product in products:
+            print(
+                f"{product['product_id']:<5} "
+                f"{product['product_name']:<20} "
+                f"{product['mrp']:<10} "
+                f"{product['stock']:<10}"
+            )
+
+        print("-" * 60)
+
+        while True:
+            try:
+                product_id = int(input("Enter product ID: "))
+            except ValueError:
+                print("Invalid product ID")
+                continue
+
+            # Find product in list
+            selected_product = None
+            for product in products:
+                if product["product_id"] == product_id:
+                    selected_product = product
+                    break
+
+            if selected_product is None:
+                print("Product not found")
+                continue
+
+            if choice == "3":
+                try:
+                    change = int(input("Enter stock change (positive to add, negative to remove): "))
+                except ValueError:
+                    print("Invalid input")
+                    continue
+                
+                result = Product.update_stock(user_id, product_id, change)
+                
+                if result["status"] == "insufficient_stock":
+                    print("Cannot remove more stock than available.")
+                    continue
+                elif result["status"] == "not_found":
+                    print("Product not found.")
+                    continue
+                
+                print("Stock updated successfully.")
+                break
+
+            try:
+                new_value = float(input("Enter new value: "))
+            except ValueError:
+                print("Invalid number")
+                continue
+
+            # Updating MRP
+            if choice == "1":
+                if new_value <= 0:
+                    print("MRP must be greater than 0")
+                    continue
+                if new_value > 99999999:
+                    print("Value too large")
+                    continue
+                result = Product.update_product_price(user_id, product_id, new_value)  # Using Product class to update price
+
+            # Updating margin
+            elif choice=="2":
+                mrp = selected_product["mrp"]
+
+                if new_value >= mrp:
+                    print("Profit margin cannot be >= MRP")
+                    continue
+                if new_value > 99999999:
+                    print("Value too large")
+                    continue
+
+                result = Product.update_profit_margin(user_id, product_id, new_value)  # Using Product class to update profit margin
+            if result["status"]=="not_found":
+                print("product not found")
+                break
+            elif result["status"]=="success":
+                print("product updated successfully")
+                break
+
+def add_product_flow(user_id):
+    while True:
+        try:
+            product_name = input("Enter product name: ").strip().lower()
+            if not product_name:
+                print("Product name cannot be empty")
+                continue
+
+            if len(product_name) > 50:
+                print("Product name too long")
+                continue
+
+            if not valid_product_name(product_name):
+                print("Invalid characters in product name")
+                continue
+
+            mrp = float(input("Enter MRP: "))
+            if mrp <= 0:
+                print("MRP should be greater than zero")
+                continue
+            if mrp > 99999999.99:
+                print("MRP value too large")
+                continue
+
+            profit_margin = float(input("Enter margin: "))
+
+            if profit_margin >= mrp:
+                print("Profit margin cannot be >= MRP")
+                continue
+
+            if profit_margin > 99999999.99:
+                print("Margin is too big")
+                continue
+
+            stock = int(input("Enter stock quantity: "))
+            if stock < 0:
+                print("Stock should be greater than or equal to zero")
+                continue
+        except ValueError:
+            print("Invalid input")
+            continue
+
+        result = Product.add_product(user_id, product_name, mrp, stock, profit_margin)  # Using Product class to add product
+
+        if result["status"] == "duplicate_product":
+            print("Product already exists")
+            continue
+        elif result["status"] == "success":
+            print("Product added successfully")
+
+        more = input("Add another product? 1. Yes  2. No: ").strip().lower()
+
+        if more in ["yes", "y", "1"]:
+            continue
+        elif more in ["no", "2"]:
+            break
+        else:
+            print("Invalid input")
+            continue
+
+
+
+
+def product_manager(user_id):
+    while True:
+        print("\nPRODUCT MANAGER")
+        print("1. View products")
+        print("2. Add product")
+        print("3. Update product")
+        print("4. Delete product")
+        print("5. Back")
+
+        choice = input("Enter your choice: ").strip()
+
+        if choice == "1":
+            view_products_flow(user_id)
+
+        elif choice == "2":
+            add_product_flow(user_id)
+
+        elif choice == "3":
+            update_product_flow(user_id)
+
+        elif choice == "4":
+            delete_products_flow(user_id)
+
+        elif choice == "5":
+            break
+
+        else:
+            print("Invalid option")
+
+############################################################
+ LOCATION: inventory\sales_manager.py
+############################################################
+
+from inventory.product_manager import view_products_flow
+from database.sql_handler import Sale  # Using Sale class for sales operations
+
+def record_sale_flow(user_id):
+    while True:
+        if not view_products_flow(user_id):
+            return
+
+        try:
+            user_input = input("Enter product ID (q for exit): ").strip()
+            if user_input == "q":
+                break
+            product_id = int(user_input)
+        except ValueError:
+            print("Invalid product ID")
+            continue
+
+        try:
+            quantity_input = input("Enter quantity sold (q to exit): ").strip()
+            if quantity_input == "q":
+                break
+            quantity = int(quantity_input)
+            if quantity <= 0:
+                print("Quantity cannot be less than or equal to zero")
+                continue
+        except ValueError:
+            print("Invalid quantity")
+            continue
+
+        result = Sale.record_sale(user_id, product_id, quantity)  # Using Sale class for sale operations
+
+        if result["status"] == "invalid_product":
+            print("Product not found")
+            continue
+        elif result["status"] == "insufficient_stock":
+            print("Not enough stock available")
+            continue
+        elif result["status"] == "invalid_quantity":
+            print("Invalid quantity")
+            continue
+        elif result["status"] == "success":
+            print("\nSALE SUCCESSFUL")
+            print("-" * 40)
+            print(f"Product : {result['product_name']}")
+            print(f"Quantity: {result['quantity']}")
+            print(f"Total   : {result['total_sale']}")
+            print("-" * 40)
+
+        more = input("Record another sale? (yes/no): ").strip().lower()
+
+        if more in ("yes", "y", "1"):
+            continue
+        elif more in ("no", "n", "2"):
+            break
+        else:
+            print("Invalid input")
+
+def sales_manager(user_id):
+    while True:
+        print("\nSALES MANAGER")
+        print("1. Record Sale")
+        print("2. Back")
+
+        choice = input("Enter choice: ").strip()
+
+        if choice == "1":
+            record_sale_flow(user_id)
+        elif choice == "2":
+            break
+        else:
+            print("Invalid option")
+
+############################################################
+ LOCATION: security\hashing.py
+############################################################
+
+import hashlib
+
+def hashing_password(password):
+    encoded=password.encode()
+    hashed=hashlib.sha256(encoded).hexdigest()
+    return hashed
+
+############################################################
+ LOCATION: utils\validation.py
+############################################################
+
+def valid_product_name(product_name):
+
+    for ch in product_name:
+        if not (ch.isalnum() or ch in (" ", "-")):
+            return False
+
+    return True
