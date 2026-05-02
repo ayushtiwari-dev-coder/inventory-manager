@@ -132,26 +132,63 @@ class Product:
             params = (user_id,)
 
         return DatabaseHelper.execute_query(query, params, fetch_type=1)
-
+    
     @staticmethod
-    def update_product_price(user_id, product_id, new_mrp):
-        if new_mrp <= 0:
-            return {"status": "invalid_mrp"}
-        query = """
-        UPDATE products
-        SET mrp = %s
-        WHERE user_id = %s AND product_id = %s
-        """
-        return DatabaseHelper.execute_query(query, (new_mrp, user_id, product_id))
+    def update_full_product(user_id, product_id, mrp=None, margin=None, stock_change=None):
 
-    @staticmethod
-    def update_profit_margin(user_id, product_id, new_margin):
-        query = """
-        UPDATE products
-        SET profit_margin = %s
-        WHERE user_id = %s AND product_id = %s
-        """
-        return DatabaseHelper.execute_query(query, (new_margin, user_id, product_id))
+        db=None
+        cursor=None
+
+        try:
+            db=get_connection()
+            cursor=db.cursor(dictionary=True)
+
+            cursor.execute("""
+            SELECT mrp, profit_margin, stock
+            FROM products
+            WHERE user_id=%s AND product_id=%s
+            FOR UPDATE
+            """,(user_id,product_id))
+
+            product=cursor.fetchone()
+
+            if not product:
+                return {"status":"not_found"}
+
+            new_mrp = mrp if mrp is not None else product["mrp"]
+            new_margin = margin if margin is not None else product["profit_margin"]
+
+            if new_margin >= new_mrp:
+                return {"status":"invalid_margin"}
+
+            if stock_change is not None:
+                if product["stock"] + stock_change < 0:
+                    return {"status":"insufficient_stock"}
+
+            cursor.execute("""
+            UPDATE products
+            SET mrp=%s,
+                profit_margin=%s,
+                stock=stock+%s
+            WHERE user_id=%s AND product_id=%s
+            """,(new_mrp,new_margin,stock_change or 0,user_id,product_id))
+
+            db.commit()
+
+            return {"status":"success"}
+
+        except Exception as e:
+            if db:
+                db.rollback()
+            return {"status":"error","message":str(e)}
+
+        finally:
+            if cursor:
+                cursor.close()
+            if db:
+                db.close()
+
+
 
     @staticmethod
     def delete_product(user_id, product_id):
@@ -160,47 +197,6 @@ class Product:
         WHERE user_id = %s AND product_id = %s
         """
         return DatabaseHelper.execute_query(query, (user_id, product_id))
-    @staticmethod
-    def update_stock(user_id,product_id,change):
-        if change==0:
-            return{"status":"invalid_input"}
-
-        db=None
-        cursor=None
-        
-        query_fetch="""
-        SELECT stock FROM products
-        WHERE user_id=%s AND product_id=%s
-        FOR UPDATE
-        """
-        try:
-            db=get_connection()
-            cursor=db.cursor(dictionary=True)
-            cursor.execute(query_fetch,(user_id,product_id))
-            product=cursor.fetchone()
-            if not product:
-                return {"status":"not_found"}
-            if product["stock"]+change<0:
-                return{"status":"insufficient_stock"}                                            
-
-            query_update="""
-            UPDATE products
-            SET stock=stock+%s
-            WHERE user_id=%s AND product_id=%s
-            AND stock + %s>=0
-            """
-            cursor.execute(query_update, (change,user_id, product_id,change))
-            db.commit()
-            if cursor.rowcount==0:
-                return{"status":"not_found"}
-            return {"status":"success"}
-        except Exception:
-            if db:
-                db.rollback()
-            raise
-        finally:
-            if cursor: cursor.close()
-            if db: db.close()
 
 
 class Sale:

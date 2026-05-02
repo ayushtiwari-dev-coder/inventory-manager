@@ -15,7 +15,7 @@ from database.sql_handler import Database,User
 from auth.login_logic import create_account, login
 from inventory.product_manager import (
     get_products, add_product, update_product_price,
-    update_profit_margin, update_stock, delete_product
+    update_profit_margin, update_stock, delete_product,update_product_full
 )
 from inventory.sales_manager import record_sale,get_recent_sales
 from analytics.report import analytics
@@ -92,17 +92,11 @@ class ProductCreate(BaseModel):
     stock: int
     profit_margin: float
 
-class ProductPriceUpdate(BaseModel):
+class ProductUpdate(BaseModel):
     product_id: int
-    new_mrp: float
-
-class StockUpdate(BaseModel):
-    product_id: int
-    change: int
-
-class ProductMarginUpdate(BaseModel):
-    product_id: int
-    new_margin: float
+    mrp: float | None = None
+    margin: float | None = None
+    stock_change: int | None = None
 
 class SaleItem(BaseModel):
     product_id: int
@@ -185,21 +179,20 @@ def create_product(data: ProductCreate, user: dict = Depends(get_current_user)):
         data.profit_margin
     )
 
-@app.put("/products/update-stock")
-def update_stock_api(data: StockUpdate, user: dict = Depends(get_current_user)):
-    return update_stock(user["user_id"], data.product_id, data.change)
-
-@app.put("/products/update-price")
-def update_price_api(data: ProductPriceUpdate, user: dict = Depends(get_current_user)):
-    return update_product_price(user["user_id"], data.product_id, data.new_mrp)
+@app.put("/products/update")
+def update_product_api(data: ProductUpdate, user: dict = Depends(get_current_user)):
+    return update_product_full(
+        user["user_id"],
+        data.product_id,
+        data.mrp,
+        data.margin,
+        data.stock_change
+    )
 
 @app.delete("/products/{product_id}")
 def remove_product(product_id: int, user: dict = Depends(get_current_user)):
     return delete_product(user["user_id"], product_id)
 
-@app.put("/products/update-margin")
-def update_margin_api(data: ProductMarginUpdate, user: dict = Depends(get_current_user)):
-    return update_profit_margin(user["user_id"], data.product_id, data.new_margin)
 
 #  PROTECTED SALES ROUTES
 

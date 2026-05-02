@@ -94,6 +94,15 @@ def update_profit_margin(user_id, product_id, new_margin):
 
 # Update Stock
 
+def update_product_full(user_id, product_id, mrp=None, margin=None, stock_change=None):
+    return Product.update_full_product(
+        user_id,
+        product_id,
+        mrp,
+        margin,
+        stock_change
+    )
+
 
 def update_stock(user_id, product_id, change):
 

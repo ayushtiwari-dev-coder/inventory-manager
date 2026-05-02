@@ -29,50 +29,37 @@ import {
 
 // ── Module state ─────────────────────────────────────────────
 let selectedProductId = null;
-let _productsCache    = [];   // last fetched products list
+let _productsCache = [];   // last fetched products list
 
 // ── Product API actions ──────────────────────────────────────
 const Product = {
     add: async () => {
-        const product_name  = document.getElementById("product-name").value;
-        const mrp           = parseFloat(document.getElementById("product-mrp").value);
+        const product_name = document.getElementById("product-name").value;
+        const mrp = parseFloat(document.getElementById("product-mrp").value);
         const profit_margin = parseFloat(document.getElementById("product-margin").value);
-        const stock         = parseInt(document.getElementById("product-stock").value);
+        const stock = parseInt(document.getElementById("product-stock").value);
 
         validateInputs({ product_name, mrp, profit_margin, stock });
         return await apiRequest("/products", "POST", { product_name, mrp, profit_margin, stock });
     },
 
     edit: async () => {
-        const id        = parseInt(selectedProductId);
-        const mrpVal    = document.getElementById("product-mrp").value;
+
+        const id = parseInt(selectedProductId);
+
+        const mrpVal = document.getElementById("product-mrp").value;
         const marginVal = document.getElementById("product-margin").value;
-        const stockVal  = document.getElementById("product-stock").value;
+        const stockVal = document.getElementById("product-stock").value;
 
-        let lastResult = { status: "success" };
+        const payload = {
+            product_id: id
+        };
 
-        if (mrpVal !== "") {
-            validateInputs({ mrp: mrpVal });
-            lastResult = await apiRequest("/products/update-price", "PUT", {
-                product_id: id,
-                new_mrp:    parseFloat(mrpVal)
-            });
-        }
-        if (marginVal !== "") {
-            validateInputs({ profit_margin: marginVal });
-            lastResult = await apiRequest("/products/update-margin", "PUT", {
-                product_id: id,
-                new_margin: parseFloat(marginVal)
-            });
-        }
-        if (stockVal !== "") {
-            validateInputs({ stock: stockVal });
-            lastResult = await apiRequest("/products/update-stock", "PUT", {
-                product_id: id,
-                change:     parseInt(stockVal)
-            });
-        }
-        return lastResult;
+        if (mrpVal !== "") payload.mrp = parseFloat(mrpVal);
+        if (marginVal !== "") payload.margin = parseFloat(marginVal);
+        if (stockVal !== "") payload.stock_change = parseInt(stockVal);
+
+        return await apiRequest("/products/update", "PUT", payload);
     },
 
     delete: async () => {
@@ -167,8 +154,8 @@ export function renderProductsInSaleMode() {
     // Attach row-click handlers for cart toggling
     table.querySelectorAll(".sale-row").forEach(row => {
         row.addEventListener("click", () => {
-            const id    = row.dataset.id;
-            const name  = row.dataset.name;
+            const id = row.dataset.id;
+            const name = row.dataset.name;
             const stock = row.dataset.stock;
 
             const added = toggleCartItem(id, name, stock);
@@ -185,7 +172,7 @@ document.addEventListener("click", (e) => {
     if (getSaleMode()) return;
 
     if (e.target.dataset.modalOpen) {
-        const mode      = e.target.dataset.modalOpen;
+        const mode = e.target.dataset.modalOpen;
         const productId = e.target.dataset.id;
         const submitBtn = document.getElementById("btn-submit-product");
 
@@ -195,7 +182,7 @@ document.addEventListener("click", (e) => {
             const confirmed = confirm(`Delete product #${selectedProductId}?`);
             if (confirmed) {
                 Product.delete().then(res => {
-                    if(res.status==="success"){
+                    if (res.status === "success") {
                         loadProducts();
                     }
                 });
