@@ -14,8 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from database.sql_handler import Database,User
 from auth.login_logic import create_account, login
 from inventory.product_manager import (
-    get_products, add_product, update_product_price,
-    update_profit_margin, update_stock, delete_product,update_product_full
+    get_products, add_product, delete_product,update_product_full
 )
 from inventory.sales_manager import record_sale,get_recent_sales
 from analytics.report import analytics
@@ -25,7 +24,7 @@ from controller_inventory import get_low_stock_products
 load_dotenv()
 app = FastAPI()
 
-# This is critical for your phone to talk to your laptop
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
