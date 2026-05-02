@@ -133,6 +133,7 @@
             background: #c0392b;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -301,7 +302,32 @@
 
 
                 <section id="analytics-page" class="section">
-                    <h2>THIS FEATURE WILL COME IN FUTURE</h2>
+
+                    <h2>Analytics</h2>
+
+                    <div style="margin-bottom:10px;">
+                        <select id="trend-period">
+                            <option value="3">Last 3 Months</option>
+                            <option value="6" selected>Last 6 Months</option>
+                            <option value="12">Last 1 Year</option>
+                            <option value="24">Last 2 Years</option>
+                        </select>
+                    </div>
+
+                    <div class="analytics-graphs">
+
+                        <div class="graph-card">
+                            <h3>Revenue Trend</h3>
+                            <canvas id="revenue-chart"></canvas>
+                        </div>
+
+                        <div class="graph-card">
+                            <h3>Profit Trend</h3>
+                            <canvas id="profit-chart"></canvas>
+                        </div>
+
+                    </div>
+
                 </section>
 
                 <section id="profile-page" class="section">

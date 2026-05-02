@@ -2,7 +2,7 @@ import { getToken } from "./helping.js";
 import "./products.js"
 import { loadSales,loadDailySummary } from "./sales.js";
 import {loadprofile} from "./profile.js"
-import { checkLowStock } from "./analytics.js";
+import { checkLowStock,loadAnalyticsGraphs } from "./analytics.js";
 
 
 
@@ -47,6 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
         loadDailySummary();
         loadSales();
     }
+    if(lastPage==="analytics-page"){
+        loadAnalyticsGraphs();
+    }
             navItems.forEach(item => {
             item.addEventListener("click", function(e){
             e.preventDefault();
@@ -71,7 +74,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if(target === "sales-page"){
                 loadDailySummary();
                 loadSales();
-            
+            }
+            if(target==="analytics-page"){
+                loadAnalyticsGraphs();
             }
             if(target=="profile-page"){
                 loadprofile();

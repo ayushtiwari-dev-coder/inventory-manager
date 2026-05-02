@@ -292,3 +292,42 @@ td {
         padding: 0 15px;
     }
 }
+
+.analytics-graphs{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:20px;
+margin-bottom:30px;
+}
+
+.graph-card{
+background:#fff;
+padding:20px;
+border-radius:10px;
+box-shadow:0 2px 8px rgba(0,0,0,0.05);
+}
+
+.table-switcher{
+margin-top:20px;
+}
+
+.table-controls{
+margin-bottom:10px;
+display:flex;
+gap:10px;
+}
+
+.table-controls button{
+padding:6px 12px;
+border:none;
+background:#3498db;
+color:white;
+border-radius:5px;
+cursor:pointer;
+}
+
+@media(max-width:768px){
+.analytics-graphs{
+grid-template-columns:1fr;
+}
+}
