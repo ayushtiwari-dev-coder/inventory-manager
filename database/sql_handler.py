@@ -205,59 +205,91 @@ class Product:
 
 class Sale:
     @staticmethod
-    def record_sale(user_id, product_id, quantity_sold):
-
-        if quantity_sold <= 0:
-            return {"status": "invalid_quantity"}
+    def record_sale(user_id, items):
 
         db = None
         cursor = None
 
         try:
+
             db = get_connection()
             cursor = db.cursor(dictionary=True)
 
-            fetch_query = """
-            SELECT product_id, product_name, mrp, stock,profit_margin
-            FROM products
-            WHERE user_id = %s AND product_id = %s
-            FOR UPDATE
+            total_sale = 0
+            total_profit = 0
+
+            sale_items = []
+
+            for item in items:
+
+                product_id = item["product_id"]
+                quantity = item["quantity"]
+
+                if quantity <= 0:
+                    return {"status": "invalid_quantity"}
+
+                fetch_query = """
+                SELECT product_id, product_name, mrp, stock, profit_margin
+                FROM products
+                WHERE user_id=%s AND product_id=%s
+                FOR UPDATE
+                """
+
+                cursor.execute(fetch_query, (user_id, product_id))
+                product = cursor.fetchone()
+
+                if not product:
+                    return {"status": "invalid_product"}
+
+                if product["stock"] < quantity:
+                    return {"status": "insufficient_stock"}
+
+                item_sale = product["mrp"] * quantity
+                item_profit = product["profit_margin"] * quantity
+
+                total_sale += item_sale
+                total_profit += item_profit
+
+                sale_items.append(
+                    (product_id, quantity, item_profit, item_sale)
+                )
+
+                stock_query = """
+                UPDATE products
+                SET stock = stock - %s
+                WHERE user_id=%s AND product_id=%s
+                """
+
+                cursor.execute(stock_query, (quantity, user_id, product_id))
+
+            insert_sale = """
+            INSERT INTO sales(user_id, total_profit, total_sale)
+            VALUES(%s, %s, %s)
             """
 
-            cursor.execute(fetch_query, (user_id, product_id))
-            product = cursor.fetchone()
+            cursor.execute(insert_sale, (user_id, total_profit, total_sale))
 
-            if not product:
-                return {"status": "invalid_product"}
+            sale_id = cursor.lastrowid
 
-            if product["stock"] < quantity_sold:
-                return {"status": "insufficient_stock"}
-
-            total_sale = quantity_sold * product["mrp"]
-            total_profit=product["profit_margin"]*quantity_sold
-
-            insert_query = """
-            INSERT INTO sales(user_id, product_id, quantity, total_sale,total_profit)
-            VALUES(%s, %s, %s, %s, %s)
+            insert_item = """
+            INSERT INTO sale_items
+            (sale_id, product_id, quantity, item_profit, item_sale)
+            VALUES (%s,%s,%s,%s,%s)
             """
 
-            cursor.execute(insert_query, (user_id, product_id, quantity_sold, total_sale,total_profit))
+            for product_id, qty, profit, sale in sale_items:
 
-            stock_query = """
-            UPDATE products
-            SET stock = stock - %s
-            WHERE user_id = %s AND product_id = %s
-            """
-
-            cursor.execute(stock_query, (quantity_sold, user_id, product_id))
+                cursor.execute(
+                    insert_item,
+                    (sale_id, product_id, qty, profit, sale)
+                )
 
             db.commit()
 
             return {
                 "status": "success",
-                "product_name": product["product_name"],
-                "quantity": quantity_sold,
-                "total_sale": total_sale
+                "total_sale": total_sale,
+                "total_profit": total_profit
             }
 
         except Exception:
@@ -266,32 +298,31 @@ class Sale:
             raise
 
         finally:
-            if cursor: cursor.close()
-            if db: db.close()
+            if cursor:
+                cursor.close()
+            if db:
+                db.close()
 
 
     @staticmethod
     def get_recent_sales(user_id, limit=10):
 
         query = """
-        SELECT
+        SELECT 
             s.sale_time,
             p.product_name,
-            s.quantity,
-            s.total_sale,
-            s.total_profit
+            si.quantity,
+            si.item_sale
         FROM sales s
-        JOIN products p
-            ON s.product_id = p.product_id
-        WHERE s.user_id = %s
+        JOIN sale_items si ON s.sale_id = si.sale_id
+        JOIN products p ON si.product_id = p.product_id
+        WHERE s.user_id=%s
         ORDER BY s.sale_time DESC
         LIMIT %s
         """
 
         return DatabaseHelper.execute_query(
-            query,
-            (user_id, limit),
-            fetch_type=1
+            query, (user_id, limit), fetch_type=1
         )
 
 
@@ -312,34 +343,57 @@ class Database:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """
+
         product_table = """
         CREATE TABLE IF NOT EXISTS products (
             product_id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
             product_name VARCHAR(50) NOT NULL,
-            mrp DECIMAL(10,2) NOT NULL,
+            mrp DECIMAL(15,2) NOT NULL,
             stock INT NOT NULL,
-            profit_margin DECIMAL(5,2) NOT NULL,
+            profit_margin DECIMAL(15,2) NOT NULL,
+
             UNIQUE(user_id, product_name),
-            FOREIGN KEY(user_id) REFERENCES users(user_id)
+
+            FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
         );
         """
+
         sales_table = """
         CREATE TABLE IF NOT EXISTS sales (
             sale_id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
+            total_profit DECIMAL(15,2) NOT NULL DEFAULT 0,
+            total_sale DECIMAL(15,2) NOT NULL,
+            sale_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+
+            INDEX idx_sales_user (user_id),
+            INDEX idx_sales_time (sale_time)
+        );
+        """
+
+        sales_items_table = """
+        CREATE TABLE IF NOT EXISTS sale_items (
+            item_id INT AUTO_INCREMENT PRIMARY KEY,
+            sale_id INT NOT NULL,
             product_id INT NOT NULL,
             quantity INT NOT NULL,
-            total_profit DECIMAL(10,2) NOT NULL DEFAULT 0,
-            total_sale DECIMAL(10,2) NOT NULL,
-            sale_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(user_id),
-            FOREIGN KEY(product_id) REFERENCES products(product_id) ON DELETE CASCADE
+            item_profit DECIMAL(15,2) NOT NULL,
+            item_sale DECIMAL(15,2) NOT NULL,
+
+            FOREIGN KEY (sale_id) REFERENCES sales(sale_id) ON DELETE CASCADE,
+            FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+
+            INDEX idx_sale_items_sale (sale_id),
+            INDEX idx_sale_items_product (product_id)
         );
         """
         cursor.execute(user_table)
         cursor.execute(product_table)
         cursor.execute(sales_table)
+        cursor.execute(sales_items_table)
         db.commit()
         cursor.close()
         db.close()

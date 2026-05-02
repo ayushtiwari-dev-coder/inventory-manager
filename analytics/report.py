@@ -20,51 +20,49 @@ class analytics:
 
     @staticmethod
     def top_products_by_profit(user_id, limit=10):
-
         query = """
-        SELECT p.product_name,
-               SUM(s.total_profit) AS total_profit,
-               SUM(s.quantity) AS total_quantity
-        FROM sales s
-        JOIN products p ON s.product_id=p.product_id
+        SELECT
+            p.product_name,
+            SUM(si.item_profit) AS total_profit,
+            SUM(si.quantity) AS total_quantity
+        FROM sale_items si
+        JOIN sales s ON si.sale_id = s.sale_id
+        JOIN products p ON si.product_id = p.product_id
         WHERE s.user_id=%s
-        GROUP BY p.product_name
+        GROUP BY p.product_id
         ORDER BY total_profit DESC
         LIMIT %s
         """
-
         results = DatabaseHelper.execute_query(
             query, (user_id, limit), fetch_type=1
         )
-
         return {
             "status": "success",
             "data": results
         }
-
     @staticmethod
     def least_sold_products(user_id, limit=10):
-
         query = """
-        SELECT p.product_name,
-               SUM(s.total_profit) AS total_profit,
-               SUM(s.quantity) AS total_quantity
-        FROM sales s
-        JOIN products p ON s.product_id=p.product_id
+        SELECT
+            p.product_name,
+            SUM(si.item_profit) AS total_profit,
+            SUM(si.quantity) AS total_quantity
+        FROM sale_items si
+        JOIN sales s ON si.sale_id = s.sale_id
+        JOIN products p ON si.product_id = p.product_id
         WHERE s.user_id=%s
-        GROUP BY p.product_name
-        ORDER BY total_quantity ASC
+        GROUP BY p.product_id
+        ORDER BY total_profit ASC
         LIMIT %s
         """
-
         results = DatabaseHelper.execute_query(
             query, (user_id, limit), fetch_type=1
         )
-
         return {
             "status": "success",
             "data": results
         }
+    
 
     @staticmethod
     def revenue_summary(user_id, period=None):

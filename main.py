@@ -28,12 +28,16 @@ app = FastAPI()
 # This is critical for your phone to talk to your laptop
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 SECRET_KEY = os.getenv("SECRET_KEY") 
 ALGORITHM = "HS256"
 
@@ -100,9 +104,13 @@ class ProductMarginUpdate(BaseModel):
     product_id: int
     new_margin: float
 
-class SaleCreate(BaseModel):
+class SaleItem(BaseModel):
     product_id: int
     quantity: int
+
+
+class SaleCreate(BaseModel):
+    items: list[SaleItem]
 
 # --- AUTH ROUTES ---
 
@@ -197,7 +205,16 @@ def update_margin_api(data: ProductMarginUpdate, user: dict = Depends(get_curren
 
 @app.post("/sales")
 def create_sale(data: SaleCreate, user: dict = Depends(get_current_user)):
-    return record_sale(user["user_id"], data.product_id, data.quantity)
+
+    items = [
+        {
+            "product_id": item.product_id,
+            "quantity": item.quantity
+        }
+        for item in data.items
+    ]
+
+    return record_sale(user["user_id"], items)
 
 @app.get("/sales/recent")
 def recent_sales(user: dict = Depends(get_current_user)):

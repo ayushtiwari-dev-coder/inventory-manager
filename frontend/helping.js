@@ -1,6 +1,6 @@
 // helping.js
 
-const BASE_URL = "https://inventory-manager-fs9t.onrender.com";
+const BASE_URL = "http://127.0.0.1:8000";
 
 
 // TOKEN HELPER
@@ -219,7 +219,7 @@ export function hideLoader(){
 export function resetmodal(submitBtn){
     clearInputs("add-product-modal");
     submitBtn.onclick=null;
-    delete submitBtn.dataset.submitACTION;
+    delete submitBtn.dataset.submitAction;
     submitBtn.disabled=false;
 }
 export function validateInputs(data){
