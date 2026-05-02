@@ -206,14 +206,25 @@ function _el(id) {
 // Revenue + Recent Sales  
 
 export async function loadDailySummary() {
+
+    const selector = document.getElementById("revenue-period");
+
+    const period = selector ? selector.value : "daily";
+
     try {
-        const result = await apiRequest("/analytics/revenue?period=daily", "GET");
+
+        const result = await apiRequest(`/analytics/revenue?period=${period}`, "GET");
+
         if (result.status === "success") {
+
             const revenue = result.data.total_revenue || 0;
             const profit = result.data.total_profit || 0;
+
             document.getElementById("val-daily-revenue").innerText = "₹" + revenue;
             document.getElementById("val-daily-profit").innerText = "₹" + profit;
+
         }
+
     } catch (err) {
         console.error("loadDailySummary:", err.message);
     }
@@ -282,3 +293,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 });
+    const periodSelector = document.getElementById("revenue-period");
+
+    if (periodSelector) {
+
+        periodSelector.addEventListener("change", () => {
+            loadDailySummary();
+        });
+
+    }

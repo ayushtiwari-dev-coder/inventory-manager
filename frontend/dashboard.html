@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - InvManager</title>
     <link rel="stylesheet" href="style.css">
 
-   
+
     <style>
-        
         #sale-mode-banner {
-            display: none; 
+            display: none;
             background: #fff3cd;
             border: 1px solid #ffc107;
             color: #856404;
@@ -21,49 +21,57 @@
             margin-bottom: 10px;
         }
 
-       
+
         tr.sale-row {
             transition: background 0.15s;
         }
+
         tr.sale-row:hover {
             background: #eaf4ff;
         }
+
         tr.sale-row.selected {
             background: #d4edda;
             outline: 2px solid #28a745;
             outline-offset: -2px;
         }
+
         tr.sale-row .cart-indicator {
             font-size: 0.82rem;
             color: #888;
         }
+
         tr.sale-row.selected .cart-indicator {
             color: #28a745;
             font-weight: 600;
         }
 
-       
-        
+
+
         #cart-view h2 {
             margin-bottom: 16px;
             color: #2c3e50;
         }
+
         .cart-action-bar {
             display: flex;
             gap: 12px;
             margin-top: 20px;
         }
+
         #btn-cart-submit {
             background: #28a745;
         }
+
         #btn-cart-submit:hover {
             background: #218838;
         }
+
         #btn-cart-back {
             background: #6c757d;
         }
 
-     
+
         .section-header-flex {
             display: flex;
             justify-content: space-between;
@@ -72,13 +80,14 @@
             gap: 8px;
             margin-bottom: 10px;
         }
+
         .btn-group {
             display: flex;
             gap: 8px;
             align-items: center;
             flex-wrap: wrap;
         }
-     
+
         #btn-start-sale {
             background: #e67e22;
             color: white;
@@ -88,10 +97,14 @@
             cursor: pointer;
             font-weight: bold;
         }
-        #btn-start-sale:hover { background: #d35400; }
+
+        #btn-start-sale:hover {
+            background: #d35400;
+        }
 
         #btn-view-cart {
-            display: none; /* hidden until sale mode */
+            display: none;
+            /* hidden until sale mode */
             background: #27ae60;
             color: white;
             border: none;
@@ -100,10 +113,13 @@
             cursor: pointer;
             font-weight: bold;
         }
-        #btn-view-cart:hover { background: #219a52; }
+
+        #btn-view-cart:hover {
+            background: #219a52;
+        }
 
         #btn-cancel-sale {
-            display: none; 
+            display: none;
             background: #e74c3c;
             color: white;
             border: none;
@@ -112,205 +128,214 @@
             cursor: pointer;
             font-weight: bold;
         }
-        #btn-cancel-sale:hover { background: #c0392b; }
+
+        #btn-cancel-sale:hover {
+            background: #c0392b;
+        }
     </style>
 </head>
+
 <body>
-<div class="dashboard-wrapper">
+    <div class="dashboard-wrapper">
 
-    <aside class="sidebar">
-        <div class="sidebar-brand" id="brand-logo">InvManager</div>
-        <nav id="sidebar-nav">
-            <a href="#products"  id="nav-products"  class="nav-item active">Products</a>
-            <a href="#sales"     id="nav-sales"      class="nav-item">Sales</a>
-            <a href="#analytics" id="nav-analytics"  class="nav-item">Analytics</a>
-            <a href="#profile"   id="nav-profile"    class="nav-item">Profile</a>
+        <aside class="sidebar">
+            <div class="sidebar-brand" id="brand-logo">InvManager</div>
+            <nav id="sidebar-nav">
+                <a href="#products" id="nav-products" class="nav-item active">Products</a>
+                <a href="#sales" id="nav-sales" class="nav-item">Sales</a>
+                <a href="#analytics" id="nav-analytics" class="nav-item">Analytics</a>
+                <a href="#profile" id="nav-profile" class="nav-item">Profile</a>
+            </nav>
+        </aside>
+
+
+        <main class="main-content">
+            <header class="topbar">
+                <span class="app-title" id="dashboard-title">Inventory Dashboard</span>
+                <div class="profile-circle" id="user-initial">U</div>
+            </header>
+
+            <div class="content-body">
+
+
+                <section id="products-page" class="section active-section">
+
+
+                    <div class="section-header-flex">
+                        <h2>Inventory List</h2>
+                        <div class="btn-group">
+
+                            <button id="btn-add-product-modal" data-modal-open="add" class="auth-btn"
+                                style="width:auto; padding:8px 15px;">+ Add Product</button>
+
+                            <button id="btn-start-sale">🛒 Start Sale</button>
+
+
+                            <button id="btn-view-cart">🛒 View Cart</button>
+                            <button id="btn-cancel-sale">✕ Cancel Sale</button>
+                        </div>
+                    </div>
+
+
+                    <div id="sale-mode-banner">
+                        📦 <strong>Sale Mode Active</strong> — Click product rows to add them to your cart.
+                        When ready, click <strong>View Cart</strong> to review and submit.
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table id="products-table">
+                            <thead>
+                                <tr>
+                                    <th>Product ID</th>
+                                    <th>Product Name</th>
+                                    <th>MRP</th>
+                                    <th>Stock</th>
+
+                                    <th id="products-action-header">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-list-body">
+                            </tbody>
+                        </table>
+                    </div>
+
+
+                    <div id="add-product-modal" class="modal hidden">
+                        <div class="modal-card">
+                            <span class="modal-close" id="modal-close-btn">&times;</span>
+                            <h3 id="modal-title">Add Product</h3>
+
+                            <div class="input-group" id="field-name">
+                                <label>Product Name</label>
+                                <input type="text" id="product-name" placeholder="Product name">
+                            </div>
+                            <div class="input-group" id="field-mrp">
+                                <label>MRP</label>
+                                <input type="number" id="product-mrp" placeholder="Product price">
+                            </div>
+                            <div class="input-group" id="field-margin">
+                                <label>Profit Margin</label>
+                                <input type="number" id="product-margin" placeholder="Profit margin">
+                            </div>
+                            <div class="input-group" id="field-stock">
+                                <label>Stock</label>
+                                <input type="number" id="product-stock" placeholder="Initial stock">
+                            </div>
+
+                            <button id="btn-submit-product" class="auth-btn">Submit</button>
+                        </div>
+                    </div>
+
+                </section>
+
+
+                <section id="cart-view" class="section">
+                    <h2>🛒 Your Cart</h2>
+                    <p style="color:#666; margin-bottom:12px; font-size:0.9rem;">
+                        Review quantities before submitting. Stock shown is the current available stock.
+                    </p>
+
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>Available Stock</th>
+                                    <th>Quantity</th>
+                                    <th>Remove</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cart-list-body">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="cart-action-bar">
+                        <button id="btn-cart-submit" class="auth-btn" style="width:auto; padding:10px 24px;">
+                            ✓ Submit Sale
+                        </button>
+                        <button id="btn-cart-back" class="auth-btn" style="width:auto; padding:10px 24px;">
+                            ← Back to Products
+                        </button>
+                    </div>
+                </section>
+
+
+                <section id="sales-page" class="section">
+                    <h2>Sales History</h2>
+                    <div style="margin-bottom:12px;">
+                        <select id="revenue-period">
+                            <option value="daily">Today</option>
+                            <option value="weekly">This Week</option>
+                            <option value="monthly">This Month</option>
+                            <option value="yearly">This Year</option>
+                        </select>
+                    </div>
+
+                    <div class="card-grid">
+                        <div class="card" id="card-daily-revenue">
+                            <h3>Daily Total Revenue</h3>
+                            <p id="val-daily-revenue">₹0.00</p>
+                        </div>
+                        <div class="card" id="card-daily-profit">
+                            <h3>Daily Total Profit</h3>
+                            <p id="val-daily-profit">₹0.00</p>
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper" style="margin-top:20px;">
+                        <h3>Recent Sales</h3>
+                        <table id="recent-sales-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Product</th>
+                                    <th>Qty</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sales-list-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+
+                <section id="analytics-page" class="section">
+                    <h2>THIS FEATURE WILL COME IN FUTURE</h2>
+                </section>
+
+                <section id="profile-page" class="section">
+                    <h2>Settings</h2>
+                    <div class="card" id="profile-info-card">
+                        <p><strong>Username:</strong> <span id="display-username">loading...</span></p>
+                        <p><strong>Name:</strong> <span id="display-name">loading...</span></p>
+                        <hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
+                        <button id="btn-logout" class="auth-btn"
+                            style="background-color:#e74c3c; width:auto; padding:10px 20px;">
+                            Logout
+                        </button>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+
+
+        <nav class="bottom-nav" id="mobile-nav">
+            <a href="#products" id="m-nav-products" class="nav-item">📦</a>
+            <a href="#sales" id="m-nav-sales" class="nav-item">💵</a>
+            <a href="#analytics" id="m-nav-analytics" class="nav-item">📊</a>
+            <a href="#profile" id="m-nav-profile" class="nav-item">👤</a>
         </nav>
-    </aside>
 
+    </div>
 
-    <main class="main-content">
-        <header class="topbar">
-            <span class="app-title" id="dashboard-title">Inventory Dashboard</span>
-            <div class="profile-circle" id="user-initial">U</div>
-        </header>
+    <!-- Loading overlay (unchanged) -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-bar"></div>
+    </div>
 
-        <div class="content-body">
-
-          
-            <section id="products-page" class="section active-section">
-
-                
-                <div class="section-header-flex">
-                    <h2>Inventory List</h2>
-                    <div class="btn-group">
-                      
-                        <button
-                            id="btn-add-product-modal"
-                            data-modal-open="add"
-                            class="auth-btn"
-                            style="width:auto; padding:8px 15px;"
-                        >+ Add Product</button>
-
-                        <button id="btn-start-sale">🛒 Start Sale</button>
-
-                        
-                        <button id="btn-view-cart">🛒 View Cart</button>
-                        <button id="btn-cancel-sale">✕ Cancel Sale</button>
-                    </div>
-                </div>
-
-                
-                <div id="sale-mode-banner">
-                    📦 <strong>Sale Mode Active</strong> — Click product rows to add them to your cart.
-                    When ready, click <strong>View Cart</strong> to review and submit.
-                </div>
-
-                <div class="table-wrapper">
-                    <table id="products-table">
-                        <thead>
-                        <tr>
-                            <th>Product ID</th>
-                            <th>Product Name</th>
-                            <th>MRP</th>
-                            <th>Stock</th>
-                  
-                            <th id="products-action-header">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody id="products-list-body">
-                        </tbody>
-                    </table>
-                </div>
-
-   
-                <div id="add-product-modal" class="modal hidden">
-                    <div class="modal-card">
-                        <span class="modal-close" id="modal-close-btn">&times;</span>
-                        <h3 id="modal-title">Add Product</h3>
-
-                        <div class="input-group" id="field-name">
-                            <label>Product Name</label>
-                            <input type="text"   id="product-name"   placeholder="Product name">
-                        </div>
-                        <div class="input-group" id="field-mrp">
-                            <label>MRP</label>
-                            <input type="number" id="product-mrp"    placeholder="Product price">
-                        </div>
-                        <div class="input-group" id="field-margin">
-                            <label>Profit Margin</label>
-                            <input type="number" id="product-margin" placeholder="Profit margin">
-                        </div>
-                        <div class="input-group" id="field-stock">
-                            <label>Stock</label>
-                            <input type="number" id="product-stock"  placeholder="Initial stock">
-                        </div>
-
-                        <button id="btn-submit-product" class="auth-btn">Submit</button>
-                    </div>
-                </div>
-
-            </section>
-
- 
-            <section id="cart-view" class="section">
-                <h2>🛒 Your Cart</h2>
-                <p style="color:#666; margin-bottom:12px; font-size:0.9rem;">
-                    Review quantities before submitting. Stock shown is the current available stock.
-                </p>
-
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                        <tr>
-                            <th>Product</th>
-                            <th>Available Stock</th>
-                            <th>Quantity</th>
-                            <th>Remove</th>
-                        </tr>
-                        </thead>
-                        <tbody id="cart-list-body">
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="cart-action-bar">
-                    <button id="btn-cart-submit" class="auth-btn" style="width:auto; padding:10px 24px;">
-                        ✓ Submit Sale
-                    </button>
-                    <button id="btn-cart-back" class="auth-btn" style="width:auto; padding:10px 24px;">
-                        ← Back to Products
-                    </button>
-                </div>
-            </section>
-
-       
-            <section id="sales-page" class="section">
-                <h2>Sales History</h2>
-
-                <div class="card-grid">
-                    <div class="card" id="card-daily-revenue">
-                        <h3>Daily Total Revenue</h3>
-                        <p id="val-daily-revenue">₹0.00</p>
-                    </div>
-                    <div class="card" id="card-daily-profit">
-                        <h3>Daily Total Profit</h3>
-                        <p id="val-daily-profit">₹0.00</p>
-                    </div>
-                </div>
-
-                <div class="table-wrapper" style="margin-top:20px;">
-                    <h3>Recent Sales</h3>
-                    <table id="recent-sales-table">
-                        <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Product</th>
-                            <th>Qty</th>
-                            <th>Total</th>
-                        </tr>
-                        </thead>
-                        <tbody id="sales-list-body"></tbody>
-                    </table>
-                </div>
-            </section>
-
-
-            <section id="analytics-page" class="section">
-                <h2>THIS FEATURE WILL COME IN FUTURE</h2>
-            </section>
-
-            <section id="profile-page" class="section">
-                <h2>Settings</h2>
-                <div class="card" id="profile-info-card">
-                    <p><strong>Username:</strong> <span id="display-username">loading...</span></p>
-                    <p><strong>Name:</strong>     <span id="display-name">loading...</span></p>
-                    <hr style="margin:15px 0; border:0; border-top:1px solid #eee;">
-                    <button id="btn-logout" class="auth-btn"
-                        style="background-color:#e74c3c; width:auto; padding:10px 20px;">
-                        Logout
-                    </button>
-                </div>
-            </section>
-
-        </div>
-    </main>
-
-
-    <nav class="bottom-nav" id="mobile-nav">
-        <a href="#products"  id="m-nav-products"  class="nav-item">📦</a>
-        <a href="#sales"     id="m-nav-sales"      class="nav-item">💵</a>
-        <a href="#analytics" id="m-nav-analytics"  class="nav-item">📊</a>
-        <a href="#profile"   id="m-nav-profile"    class="nav-item">👤</a>
-    </nav>
-
-</div>
-
-<!-- Loading overlay (unchanged) -->
-<div id="loading-overlay" class="loading-overlay hidden">
-    <div class="loading-bar"></div>
-</div>
-
-<script type="module" src="dashboard.js"></script>
+    <script type="module" src="dashboard.js"></script>
 </body>
+
 </html>

@@ -216,6 +216,18 @@ def recent_sales(user: dict = Depends(get_current_user)):
 
 # --- PROTECTED ANALYTICS ROUTES ---
 
+@app.get("/analytics/sales-trend")
+def sales_trend(months: int = 4, user: dict = Depends(get_current_user)):
+    return analytics.sales_trend(user["user_id"], months)
+
+@app.get("/analytics/top-products")
+def top_products(limit: int = 10, user: dict = Depends(get_current_user)):
+    return analytics.top_products_by_profit(user["user_id"], limit)
+
+@app.get("/analytics/least-products")
+def least_products(limit: int = 10, user: dict = Depends(get_current_user)):
+    return analytics.least_sold_products(user["user_id"], limit)
+
 @app.get("/analytics/revenue")
 def revenue(period: str=None,user: dict = Depends(get_current_user)):
     return analytics.revenue_summary(user["user_id"],period)

@@ -12,7 +12,7 @@ export async function checkLowStock() {
                 let names = products.map(p => `${p.product_name} (stock: ${p.stock})`).join("\n");
 
                 alert(
-`LOW STOCK ALERT ⚠️
+                    `LOW STOCK ALERT ⚠️
 
 The following products are running low:
 
