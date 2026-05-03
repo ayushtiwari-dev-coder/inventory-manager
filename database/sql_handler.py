@@ -140,6 +140,7 @@ class Product:
         cursor=None
 
         try:
+            print("raw input: ",mrp,margin,stock_change)
             db=get_connection()
             cursor=db.cursor(dictionary=True)
 
@@ -154,9 +155,12 @@ class Product:
 
             if not product:
                 return {"status":"not_found"}
+            print("db product: ",product)
 
-            new_mrp = mrp if mrp is not None else product["mrp"]
-            new_margin = margin if margin is not None else product["profit_margin"]
+            new_mrp = float(mrp if mrp is not None else product["mrp"])
+            new_margin = float(margin if margin is not None else product["profit_margin"])
+
+            print(" final val: ",new_mrp,new_margin)
 
             if new_margin >= new_mrp:
                 return {"status":"invalid_margin"}

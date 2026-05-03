@@ -49,12 +49,13 @@ def add_product(user_id, product_name, mrp, stock, profit_margin):
 # Update Stock
 
 def update_product_full(user_id, product_id, mrp=None, margin=None, stock_change=None):
+    
     if stock_change == 0:
         return {"status": "invalid_input"}
-    if mrp <= 0:
+    if mrp is not None and mrp <= 0:
         return {"status": "invalid_mrp"}
 
-    if mrp > 99999999:
+    if mrp is not None and mrp > 99999999:
         return {"status": "value_too_large"}
 
     return Product.update_full_product(

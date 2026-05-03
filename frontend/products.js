@@ -50,6 +50,7 @@ const Product = {
         if (mrpVal !== "") payload.mrp = parseFloat(mrpVal);
         if (marginVal !== "") payload.margin = parseFloat(marginVal);
         if (stockVal !== "") payload.stock_change = parseInt(stockVal);
+        console.log(payload)
 
         return await apiRequest("/products/update", "PUT", payload);
     },
