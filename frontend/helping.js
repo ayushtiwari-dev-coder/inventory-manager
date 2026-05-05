@@ -245,39 +245,54 @@ export function validateInputs(data){
         }
     }
 
-    // MRP
-    if(data.mrp !== undefined){
+    // selling price
+    if(data.selling_price !== undefined){
 
-        const mrp = Number(data.mrp);
+        const sp = Number(data.selling_price);
 
-        if(isNaN(mrp)){
-            throw new Error("MRP must be a number");
+        if(isNaN(sp)){
+            throw new Error("selling price must be a number");
         }
 
-        if(mrp <= 0){
-            throw new Error("MRP must be greater than zero");
+        if(sp <= 0){
+            throw new Error("selling price must be greater than zero");
         }
 
-        if(mrp > 99999999){
-            throw new Error("MRP too large");
+        if(sp > 99999999){
+            throw new Error("selling price too large");
         }
     }
 
-    // PROFIT MARGIN
-    if(data.profit_margin !== undefined){
+    //cost price
+    if(data.cost_price !== undefined){
 
-        const margin = Number(data.profit_margin);
+        const cp = Number(data.cost_price);
 
-        if(isNaN(margin)){
-            throw new Error("Profit margin must be a number");
+        if(isNaN(cp)){
+            throw new Error("cost price must be a number");
         }
 
-        if(margin <= 0){
-            throw new Error("Profit margin must be greater than zero");
+        if(cp <= 0){
+            throw new Error("cost price must be greater than zero");
         }
 
-        if(margin > 99999999){
-            throw new Error("Profit margin too large");
+        if(cp > 99999999){
+            throw new Error("cost price too large");
+        }
+    }
+
+    if(data.selling_price !== undefined &&
+        data.cost_price !== undefined
+    ){
+        const sp=Number(data.selling_price);
+        const cp=Number(data.cost_price);
+
+        if(isNaN(sp) || isNaN(cp)){
+            throw new Error("invalid price value")
+        }
+
+        if(cp>sp){
+            console.warn("selling at loss")
         }
     }
 
@@ -290,8 +305,8 @@ export function validateInputs(data){
             throw new Error("Stock must be a whole number");
         }
 
-        if(stock <= 0){
-            throw new Error("Stock must be greater than zero");
+        if(stock < 0){
+            throw new Error("Stock must be greateror equal to zero");
         }
 
         if(stock > 9999999){

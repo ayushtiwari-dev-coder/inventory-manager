@@ -85,19 +85,24 @@ class User:
 
 class Product:
     @staticmethod
-    def add_product(user_id, product_name, mrp, stock, profit_margin):
-        if profit_margin >= mrp:
-            return {"status": "invalid_margin"}
-        if mrp <= 0 or stock < 0:
+    def add_product(user_id, product_name, selling_price, stock,cost_price):
+        if cost_price<=0:
+            return {"status": "invalid_cost_price"}
+        if selling_price <= 0 or stock < 0:
             return {"status": "invalid_input"}
+        
+        mrp=selling_price
+        profit_margin=round(selling_price-cost_price,2)
 
         query = """
-        INSERT INTO products (user_id, product_name, mrp, stock, profit_margin)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO products (user_id, product_name, mrp, stock, profit_margin,cost_price)
+        VALUES (%s, %s, %s, %s, %s,%s)
         """
-        result=DatabaseHelper.execute_query(query, (user_id, product_name, mrp, stock, profit_margin))
+        result=DatabaseHelper.execute_query(query, (user_id, product_name, mrp, stock, profit_margin,cost_price))
         if result.get("status")=="error":
-            return {"status":"duplicate_product"}
+            if "Duplicate" in result.get("message",""):
+                return {"status":"duplicate_product"}
+            return result
         return result
 
 
@@ -132,20 +137,23 @@ class Product:
             params = (user_id,)
 
         return DatabaseHelper.execute_query(query, params, fetch_type=1)
-    
     @staticmethod
-    def update_full_product(user_id, product_id, mrp=None, margin=None, stock_change=None):
-
+    def update_full_product(user_id, product_id, selling_price=None, cost_price=None, margin=None, stock_change=None):
         db=None
         cursor=None
-
         try:
-            
             db=get_connection()
             cursor=db.cursor(dictionary=True)
 
+            if selling_price=="":
+                selling_price=None
+            if cost_price=="":
+                cost_price=None
+            if stock_change=="":
+                stock_change=None
+
             cursor.execute("""
-            SELECT mrp, profit_margin, stock
+            SELECT mrp, cost_price, stock
             FROM products
             WHERE user_id=%s AND product_id=%s
             FOR UPDATE
@@ -156,29 +164,26 @@ class Product:
             if not product:
                 return {"status":"not_found"}
             
-
-            new_mrp = float(mrp if mrp is not None else product["mrp"])
-            new_margin = float(margin if margin is not None else product["profit_margin"])
+            
+            new_sp = float(selling_price if selling_price is not None else product["mrp"])
+            new_cp = float(cost_price if cost_price is not None else product["cost_price"])
 
             
+            new_margin = round(new_sp - new_cp, 2)
 
-            if new_margin >= new_mrp:
-                return {"status":"invalid_margin"}
-
+           
             if stock_change is not None:
                 if product["stock"] + stock_change < 0:
                     return {"status":"insufficient_stock"}
+            stock_delta=int(stock_change) if stock_change is not None else 0
 
             cursor.execute("""
             UPDATE products
-            SET mrp=%s,
-                profit_margin=%s,
-                stock=stock+%s
+            SET mrp=%s, cost_price=%s, profit_margin=%s, stock=stock+%s
             WHERE user_id=%s AND product_id=%s
-            """,(new_mrp,new_margin,stock_change or 0,user_id,product_id))
+            """,(new_sp, new_cp, new_margin, stock_delta, user_id, product_id))
 
             db.commit()
-
             return {"status":"success"}
 
         except Exception as e:
@@ -191,7 +196,6 @@ class Product:
                 cursor.close()
             if db:
                 db.close()
-
 
 
     @staticmethod
@@ -352,7 +356,7 @@ class Database:
             mrp DECIMAL(15,2) NOT NULL,
             stock INT NOT NULL,
             profit_margin DECIMAL(15,2) NOT NULL,
-
+            cost_price DECIMAL (15,2) NOT NULL,
             UNIQUE(user_id, product_name),
 
             FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
@@ -366,7 +370,7 @@ class Database:
             total_profit DECIMAL(15,2) NOT NULL DEFAULT 0,
             total_sale DECIMAL(15,2) NOT NULL,
             sale_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
+            discount DECIMAL(15,2) DEFAULT 0,
             FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
 
             INDEX idx_sales_user (user_id),

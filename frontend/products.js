@@ -27,31 +27,31 @@ let _productsCache = [];   // last fetched products list
 const Product = {
     add: async () => {
         const product_name = document.getElementById("product-name").value;
-        const mrp = parseFloat(document.getElementById("product-mrp").value);
-        const profit_margin = parseFloat(document.getElementById("product-margin").value);
+        const selling_price = parseFloat(document.getElementById("product-selling-price").value);
+        const cost_price = parseFloat(document.getElementById("product-cost-price").value);
         const stock = parseInt(document.getElementById("product-stock").value);
 
-        validateInputs({ product_name, mrp, profit_margin, stock });
-        return await apiRequest("/products", "POST", { product_name, mrp, profit_margin, stock });
+        validateInputs({ product_name, selling_price, cost_price, stock });
+        return await apiRequest("/products", "POST", { product_name, selling_price, cost_price, stock });
     },
 
     edit: async () => {
 
         const id = parseInt(selectedProductId);
 
-        const mrpVal = document.getElementById("product-mrp").value;
-        const marginVal = document.getElementById("product-margin").value;
+        const sellingVal = document.getElementById("product-selling-price").value;
+        const costVal = document.getElementById("product-cost-price").value;
         const stockVal = document.getElementById("product-stock").value;
 
-        const payload = {
-            product_id: id
-        };
+        const payload={
+            product_id:id
+        }
 
-        if (mrpVal !== "") payload.mrp = parseFloat(mrpVal);
-        if (marginVal !== "") payload.margin = parseFloat(marginVal);
-        if (stockVal !== "") payload.stock_change = parseInt(stockVal);
+        if (sellingVal !== "" && ! isNaN(sellingVal)) payload.selling_price = parseFloat(sellingVal);
+        if (costVal !== "" && ! isNaN(costVal)) payload.cost_price = parseFloat(costVal);
+        if (stockVal !== "" && !isNaN(stockVal)) payload.stock_change = parseInt(stockVal);
         
-
+        console.log(payload)
         return await apiRequest("/products/update", "PUT", payload);
     },
 

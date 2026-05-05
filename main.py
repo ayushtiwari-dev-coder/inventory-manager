@@ -31,7 +31,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:3000",
         "http://127.0.0.1:8000",
-        "http://localhost:8000",
+        "http://localhost:8000"
         "https://inventory-manager-fs9t.onrender.com"
     ],
     allow_credentials=True,
@@ -88,14 +88,14 @@ class RegisterRequest(BaseModel):
 
 class ProductCreate(BaseModel):
     product_name: str
-    mrp: float
+    selling_price: float
     stock: int
-    profit_margin: float
+    cost_price: float
 
 class ProductUpdate(BaseModel):
     product_id: int
-    mrp: float | None = None
-    margin: float | None = None
+    selling_price: float | None = None
+    cost_price: float | None = None
     stock_change: int | None = None
 
 class SaleItem(BaseModel):
@@ -174,9 +174,9 @@ def create_product(data: ProductCreate, user: dict = Depends(get_current_user)):
     return add_product(
         user["user_id"],
         data.product_name,
-        data.mrp,
+        data.selling_price,
         data.stock,
-        data.profit_margin
+        data.cost_price
     )
 
 @app.put("/products/update")
@@ -184,8 +184,8 @@ def update_product_api(data: ProductUpdate, user: dict = Depends(get_current_use
     return update_product_full(
         user["user_id"],
         data.product_id,
-        data.mrp,
-        data.margin,
+        data.selling_price,
+        data.cost_price,
         data.stock_change
     )
 
