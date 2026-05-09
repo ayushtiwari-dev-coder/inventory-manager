@@ -112,8 +112,16 @@ function _renderCartTable() {
             let val = parseInt(e.target.value);
             const maxStock = _cart[idx].stock;
 
-            if (isNaN(val) || val < 1) { val = 1; e.target.value = 1; }
-            if (val > maxStock) { val = maxStock; e.target.value = maxStock; }
+            if (isNaN(val) || val < 1) { 
+                alert(`selling quantity cannot be negative or zero`)
+                val = 1; 
+                e.target.value = 1;
+             }
+            if (val > maxStock) { 
+                alert(`Only ${maxStock} items available in stock`)
+                val = maxStock; 
+                e.target.value = maxStock; 
+            }
 
             _cart[idx].quantity = val;
         });
@@ -149,6 +157,7 @@ export async function submitCart() {
             alert(`Invalid quantity for ${item.product_name}`);
             return;
         }
+        
         if (item.quantity > item.stock) {
             alert(`Quantity for ${item.product_name} exceeds stock (${item.stock})`);
             return;

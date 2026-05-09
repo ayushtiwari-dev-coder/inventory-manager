@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - InvManager</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
 
 
     <style>
@@ -181,6 +181,15 @@
                     <div id="sale-mode-banner">
                         📦 <strong>Sale Mode Active</strong> — Click product rows to add them to your cart.
                         When ready, click <strong>View Cart</strong> to review and submit.
+                    </div>
+
+                    <div style="margin-bottom:12px;">
+                        <input type="text" id="product-search" placeholder="Search products..." style="
+            width:100%;
+            padding:10px;
+            border:1px solid #ddd;
+            border-radius:6px;
+        " />
                     </div>
 
                     <div class="table-wrapper">
@@ -385,7 +394,7 @@
         <div class="loading-bar"></div>
     </div>
 
-    <script type="module" src="dashboard.js"></script>
+    <script type="module" src="dashboard.js?v=2"></script>
 </body>
 
 </html>

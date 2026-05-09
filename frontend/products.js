@@ -22,6 +22,7 @@ import {
 // Module state 
 let selectedProductId = null;
 let _productsCache = [];   // last fetched products list
+let _searchTerm = "";
 
 //Product API actions
 const Product = {
@@ -82,6 +83,14 @@ export async function loadProducts() {
     }
 }
 
+function getFilteredProducts() {
+    return _productsCache.filter(p =>
+        p.product_name
+            .toLowerCase()
+            .includes(_searchTerm.toLowerCase())
+    );
+}
+
 
 export function renderProductsNormal() {
     const table = document.getElementById("products-list-body");
@@ -93,7 +102,7 @@ export function renderProductsNormal() {
     }
 
     let html = "";
-    _productsCache.forEach(p => {
+    getFilteredProducts().forEach(p => {
         html += `
         <tr data-id="${p.product_id}" data-name="${p.product_name}" data-stock="${p.stock}">
             <td>${p.product_id}</td>
@@ -119,7 +128,7 @@ export function renderProductsInSaleMode() {
     }
 
     let html = "";
-    _productsCache.forEach(p => {
+    getFilteredProducts().forEach(p => {
         const selected = isInCart(p.product_id) ? "selected" : "";
         html += `
         <tr
@@ -229,3 +238,17 @@ document.addEventListener("exitSaleMode", () => {
 document.addEventListener("reloadProducts", () => {
     loadProducts()
 });
+const searchInput = document.getElementById("product-search");
+
+if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+
+        _searchTerm = e.target.value;
+
+        if (getSaleMode()) {
+            renderProductsInSaleMode();
+        } else {
+            renderProductsNormal();
+        }
+    });
+}
