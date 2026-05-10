@@ -1,7 +1,7 @@
 
-
+import { store,actions } from "./store.js";
 import { apiRequest, closeModal, clearInputs } from "./helping.js";
-
+import { renderProductsInSaleMode,renderProductsNormal } from "./products.js";
 
 // ── Internal state ──────────────────────────────────────────
 let _saleMode = false;
@@ -157,7 +157,6 @@ export async function submitCart() {
             alert(`Invalid quantity for ${item.product_name}`);
             return;
         }
-        
         if (item.quantity > item.stock) {
             alert(`Quantity for ${item.product_name} exceeds stock (${item.stock})`);
             return;
@@ -171,14 +170,28 @@ export async function submitCart() {
 
     try {
         const result = await apiRequest("/sales", "POST", { items });
-
         if (result.status === "success") {
-            alert(`Sale recorded!\nTotal: ₹${result.data?.total_sale ?? ""}\nProfit: ₹${result.data?.total_profit ?? ""}`);
+            alert(`Sale recorded!\nTotal: ₹ ${result.data?.total_sale ?? ""}\nProfit: ₹ ${result.data?.total_profit ?? ""}`);
+
+            // 1. Mutate the cache locally (Optimistic update)
+            _cart.forEach(cartitem => {
+                actions.deductStock(cartitem.product_id, cartitem.quantity);
+            });
+
+            // 2. Mark BOTH analytics and revenue summaries dirty so they'll refetch next time they are viewed
+            actions.markAnalyticsDirty();
+            actions.markRevenueDirty();
+
+            // 3. Clear cart and exit sale mode
             exitSaleMode();
-            // Reload all dependent data
-            document.dispatchEvent(new Event("reloadProducts"));
-            await loadDailySummary();
-            await loadSales();
+
+            // 4. Force immediate re-render of the product UI from our mutated cache
+            if (getSaleMode()) {
+                renderProductsInSaleMode();
+            } else {
+                renderProductsNormal();
+            }
+
         } else {
             alert("Sale failed: " + (result.message || result.status));
         }
@@ -215,25 +228,30 @@ function _el(id) {
 // Revenue + Recent Sales  
 
 export async function loadDailySummary() {
-
     const selector = document.getElementById("revenue-period");
-
     const period = selector ? selector.value : "daily";
 
+    // 1. Use the cached summary if it's not marked dirty and contains the selected period
+    if (!store.revenue.isDirty && store.revenue.periods[period]) {
+        console.log(`Serving ${period} revenue summary from Cache!`);
+        const cached = store.revenue.periods[period];
+        document.getElementById("val-daily-revenue").innerText = "₹ " + cached.total_revenue;
+        document.getElementById("val-daily-profit").innerText = "₹ " + cached.total_profit;
+        return;
+    }
+
     try {
-
         const result = await apiRequest(`/analytics/revenue?period=${period}`, "GET");
-
         if (result.status === "success") {
-
             const revenue = result.data.total_revenue || 0;
             const profit = result.data.total_profit || 0;
 
-            document.getElementById("val-daily-revenue").innerText = "₹" + revenue;
-            document.getElementById("val-daily-profit").innerText = "₹" + profit;
+            // 2. Store in cache
+            actions.setRevenueSummary(period, { total_revenue: revenue, total_profit: profit });
 
+            document.getElementById("val-daily-revenue").innerText = "₹ " + revenue;
+            document.getElementById("val-daily-profit").innerText = "₹ " + profit;
         }
-
     } catch (err) {
         console.error("loadDailySummary:", err.message);
     }

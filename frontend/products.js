@@ -19,6 +19,8 @@ import {
     isInCart
 } from "./sales.js";
 
+import { store, actions } from "./store.js";
+
 // Module state 
 let selectedProductId = null;
 let _productsCache = [];   // last fetched products list
@@ -63,17 +65,34 @@ const Product = {
 
 // Load + render (STATE 1 — normal)
 
+// frontend/products.js
+
+
 export async function loadProducts() {
+    
+    if (store.products && store.products.length > 0) {
+        _productsCache = store.products; // Fallback sync for internal module logic
+        if (getSaleMode()) {
+            renderProductsInSaleMode();
+        } else {
+            renderProductsNormal();
+        }
+        return;
+    }
+
     try {
         const result = await apiRequest("/products", "GET");
         if (result.status === "success") {
+            actions.setProducts(result.products); // Store in global cache
             _productsCache = result.products;
+            
             if (getSaleMode()) {
                 renderProductsInSaleMode();
             } else {
                 renderProductsNormal();
             }
         } else if (result.status === "no_products") {
+            actions.setProducts([]);
             _productsCache = [];
             document.getElementById("products-list-body").innerHTML =
                 '<tr><td colspan="5">No products available</td></tr>';

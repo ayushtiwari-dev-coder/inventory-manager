@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         });
 
-const BASE_URL = "https://inventory-manager-fs9t.onrender.com";
+const BASE_URL = "http://127.0.0.1:8000";
 
 async function handle_register(e) {
 

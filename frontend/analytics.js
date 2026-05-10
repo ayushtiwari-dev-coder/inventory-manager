@@ -1,4 +1,5 @@
 import { apiRequest } from "./helping.js";
+import { store, actions } from "./store.js";
 
 let revenueChart = null;
 let profitChart = null;
@@ -35,28 +36,37 @@ ${names}`
 
 
 export async function loadAnalyticsGraphs() {
-
     const selector = document.getElementById("trend-period");
     const months = selector ? selector.value : 6;
 
+    // 1. Check if the cache is clean AND we already have this specific dropdown timeframe cached
+    if (!store.analytics.isDirty && store.analytics.timeframes[months]) {
+        console.log(`Serving analytics for ${months} months from Cache!`);
+        const cached = store.analytics.timeframes[months];
+        renderRevenueChart(cached.dates, cached.revenue);
+        renderProfitChart(cached.dates, cached.profit);
+        return;
+    }
+
+    // 2. Otherwise, execute the heavy DB/API fetch
     try {
-
         const result = await apiRequest(`/analytics/sales-trend?months=${months}`);
-
         if (result.status !== "success") return;
 
         const dates = result.data.dates.reverse();
         const revenue = result.data.revenue.reverse();
         const profit = result.data.profit.reverse();
 
+        // 3. Cache the clean data keyed by the timeframe value
+        actions.setAnalytics(months, { dates, revenue, profit });
+
         renderRevenueChart(dates, revenue);
         renderProfitChart(dates, profit);
-
     } catch (err) {
         console.error("Graph error:", err.message);
     }
-
 }
+
 function renderRevenueChart(labels, data) {
 
     const ctx = document.getElementById("revenue-chart").getContext("2d");
