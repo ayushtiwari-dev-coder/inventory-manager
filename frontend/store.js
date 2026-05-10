@@ -1,23 +1,30 @@
 // frontend/store.js
 
 export const store = {
-    products: null,       // Cache for product list array
-    profile: null,        // Cache for user profile { username, name }
+    products: null,
+    isProductsDirty: true, // Start true to force initial fetch
+    profile: null,
     analytics: {
-        timeframes: {},   // Holds multiple cached datasets like: { "3": data, "6": data, "12": data }
-        isDirty: true     // Invalidation flag for trend charts
+        timeframes: {},
+        isDirty: true
     },
     revenue: {
-        periods: {},      // Holds multiple cached summaries like: { "daily": data, "weekly": data }
-        isDirty: true     // Invalidation flag for revenue cards
+        periods: {},
+        isDirty: true
     }
 };
 
 export const actions = {
     setProducts(productsList) {
         store.products = productsList;
+        store.isProductsDirty = false; // Mark clean once saved
     },
-    
+
+    markProductsDirty() {
+        store.isProductsDirty = true;
+        store.products = null; // Flush cache
+    },
+
     setProfile(profileData) {
         store.profile = profileData;
     },
@@ -29,7 +36,7 @@ export const actions = {
 
     markAnalyticsDirty() {
         store.analytics.isDirty = true;
-        store.analytics.timeframes = {}; // Clear timeframe-specific caches on mutation
+        store.analytics.timeframes = {}; // Clear cached timeframes on mutation
     },
 
     setRevenueSummary(period, data) {
@@ -39,7 +46,7 @@ export const actions = {
 
     markRevenueDirty() {
         store.revenue.isDirty = true;
-        store.revenue.periods = {}; // Clear cached revenue periods on new sales
+        store.revenue.periods = {}; // Clear cached summaries on mutation
     },
 
     deductStock(productId, quantity) {

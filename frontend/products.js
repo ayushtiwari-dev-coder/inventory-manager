@@ -26,66 +26,92 @@ let selectedProductId = null;
 let _productsCache = [];   // last fetched products list
 let _searchTerm = "";
 
-//Product API actions
+// Product API actions inside frontend/products.js
 const Product = {
     add: async () => {
         const product_name = document.getElementById("product-name").value;
         const selling_price = parseFloat(document.getElementById("product-selling-price").value);
         const cost_price = parseFloat(document.getElementById("product-cost-price").value);
         const stock = parseInt(document.getElementById("product-stock").value);
-
+        
         validateInputs({ product_name, selling_price, cost_price, stock });
-        return await apiRequest("/products", "POST", { product_name, selling_price, cost_price, stock });
+
+        const response = await apiRequest("/products", "POST", { 
+            product_name, 
+            selling_price, 
+            cost_price, 
+            stock 
+        });
+
+        if (response.status === "success") {
+            // Mark all caches stale!
+            actions.markProductsDirty();
+            actions.markAnalyticsDirty();
+            actions.markRevenueDirty();
+        }
+        return response;
     },
 
     edit: async () => {
-
         const id = parseInt(selectedProductId);
-
         const sellingVal = document.getElementById("product-selling-price").value;
         const costVal = document.getElementById("product-cost-price").value;
         const stockVal = document.getElementById("product-stock").value;
 
-        const payload={
-            product_id:id
-        }
+        const payload = { product_id: id };
 
-        if (sellingVal !== "" && ! isNaN(sellingVal)) payload.selling_price = parseFloat(sellingVal);
-        if (costVal !== "" && ! isNaN(costVal)) payload.cost_price = parseFloat(costVal);
+        if (sellingVal !== "" && !isNaN(sellingVal)) payload.selling_price = parseFloat(sellingVal);
+        if (costVal !== "" && !isNaN(costVal)) payload.cost_price = parseFloat(costVal);
         if (stockVal !== "" && !isNaN(stockVal)) payload.stock_change = parseInt(stockVal);
-        
-        console.log(payload)
-        return await apiRequest("/products/update", "PUT", payload);
+
+        const response = await apiRequest("/products/update", "PUT", payload);
+
+        if (response.status === "success") {
+            // Mark all caches stale!
+            actions.markProductsDirty();
+            actions.markAnalyticsDirty();
+            actions.markRevenueDirty();
+        }
+        return response;
     },
 
     delete: async () => {
-        return await apiRequest(`/products/${selectedProductId}`, "DELETE");
+        const response = await apiRequest(`/products/${selectedProductId}`, "DELETE");
+
+        if (response.status === "success") {
+            // Mark all caches stale!
+            actions.markProductsDirty();
+            actions.markAnalyticsDirty();
+            actions.markRevenueDirty();
+        }
+        return response;
     }
 };
-
 // Load + render (STATE 1 — normal)
 
 // frontend/products.js
 
 
+
+
 export async function loadProducts() {
-    
-    if (store.products && store.products.length > 0) {
-        _productsCache = store.products; // Fallback sync for internal module logic
+    // Only serve from cache if we have products AND they aren't marked dirty
+    if (!store.isProductsDirty && store.products && store.products.length > 0) {
+        _productsCache = store.products; // Sync internal module list
         if (getSaleMode()) {
             renderProductsInSaleMode();
         } else {
             renderProductsNormal();
         }
-        return;
+        return; // Skip the database fetch!
     }
 
     try {
         const result = await apiRequest("/products", "GET");
         if (result.status === "success") {
-            actions.setProducts(result.products); // Store in global cache
+            actions.setProducts(result.products); // Save to cache & sets isProductsDirty = false
             _productsCache = result.products;
-            
+
             if (getSaleMode()) {
                 renderProductsInSaleMode();
             } else {
@@ -98,7 +124,7 @@ export async function loadProducts() {
                 '<tr><td colspan="5">No products available</td></tr>';
         }
     } catch (err) {
-        console.error("loadProducts:", err.message);
+        console.error("loadProducts failed:", err.message);
     }
 }
 
@@ -216,19 +242,23 @@ document.addEventListener("click", (e) => {
         closeModal("add-product-modal");
     }
 
-    // Add / Edit submit
-    if (e.target.id === "btn-submit-product" && e.target.dataset.submitAction) {
-        const mode = e.target.dataset.submitAction;
-        handleSubmit(
-            e.target,
-            () => Product[mode](),
-            () => {
-                closeModal("add-product-modal");
-                clearInputs("add-product-modal");
-                loadProducts();
-            }
-        );
-    }
+    // Add / Edit submit handler
+if (e.target.id === "btn-submit-product" && e.target.dataset.submitAction) {
+    const mode = e.target.dataset.submitAction;
+    handleSubmit(
+        e.target,
+        () => Product[mode](),
+        () => {
+            closeModal("add-product-modal");
+            clearInputs("add-product-modal");
+            
+            // This will execute loadProducts() which now correctly sees 
+            // store.isProductsDirty = true, forces the API query,
+            // and draws your new/edited product list instantly!
+            loadProducts(); 
+        }
+    );
+}
 });
 
 // Wire up Add Product button
