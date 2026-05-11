@@ -85,23 +85,23 @@ class User:
 
 class Product:
     @staticmethod
-    def add_product(user_id, product_name, selling_price, stock,cost_price):
-        if cost_price<=0:
-            return {"status": "invalid_cost_price"}
+    def add_product(user_id, product_name, selling_price, stock, cost_price):
+        if cost_price <= 0:
+            return {"status": "error", "message": "Cost price must be greater than zero."}
         if selling_price <= 0 or stock < 0:
-            return {"status": "invalid_input"}
-        
-        mrp=selling_price
-        profit_margin=round(selling_price-cost_price,2)
+            return {"status": "error", "message": "Invalid product input parameters."}
 
+        mrp = selling_price
+        profit_margin = round(selling_price - cost_price, 2)
         query = """
-        INSERT INTO products (user_id, product_name, mrp, stock, profit_margin,cost_price)
-        VALUES (%s, %s, %s, %s, %s,%s)
+        INSERT INTO products (user_id, product_name, mrp, stock, profit_margin, cost_price)
+        VALUES (%s, %s, %s, %s, %s, %s)
         """
-        result=DatabaseHelper.execute_query(query, (user_id, product_name, mrp, stock, profit_margin,cost_price))
-        if result.get("status")=="error":
-            if "Duplicate" in result.get("message",""):
-                return {"status":"duplicate_product"}
+        result = DatabaseHelper.execute_query(query, (user_id, product_name, mrp, stock, profit_margin, cost_price))
+        
+        if result.get("status") == "error":
+            if "Duplicate" in result.get("message", ""):
+                return {"status": "duplicate_product"}
             return result
         return result
 
@@ -172,9 +172,14 @@ class Product:
             new_margin = round(new_sp - new_cp, 2)
 
            
+            
             if stock_change is not None:
                 if product["stock"] + stock_change < 0:
-                    return {"status":"insufficient_stock"}
+                    return {"status": "insufficient_stock"}
+                
+                # Check for signed INT maximum capacity overflow
+                if product["stock"] + stock_change > 2147483647:
+                    return {"status": "error", "message": "Warehouse limit reached. Total stock cannot exceed 2,147,483,647."}
             stock_delta=int(stock_change) if stock_change is not None else 0
 
             cursor.execute("""
@@ -230,7 +235,7 @@ class Sale:
                 quantity = item["quantity"]
 
                 if quantity <= 0:
-                    return {"status": "invalid_quantity"}
+                    return {"status": "erroe","message":"sale quantity must be greater than zero"}
 
                 fetch_query = """
                 SELECT product_id, product_name, mrp, stock, profit_margin
@@ -243,10 +248,10 @@ class Sale:
                 product = cursor.fetchone()
 
                 if not product:
-                    return {"status": "invalid_product"}
+                    return {"status": "error","message":"Product does not exist"}
 
                 if product["stock"] < quantity:
-                    return {"status": "insufficient_stock"}
+                    return {"status": "error","message":f"insufficient stock.Only {product["stock"]} units of {product["product_name"]} left"}
 
                 item_sale = product["mrp"] * quantity
                 item_profit = product["profit_margin"] * quantity

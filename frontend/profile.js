@@ -1,4 +1,4 @@
-import { apiRequest, getToken } from "./helping.js";
+import { apiRequest, getToken,showToast } from "./helping.js";
 import { store, actions } from "./store.js";
 
 export async function loadprofile(){
@@ -23,12 +23,16 @@ export async function loadprofile(){
     try {
         const result = await apiRequest("/profile", "GET");
         if (result.status === "success") {
-            actions.setProfile(result.data); // Save to cache
+            actions.setProfile(result.data);
+            // Save to cache
             usernameField.innerText = result.data.username;
             nameField.innerText = result.data.name;
+        } else {
+            showToast(result.message || "Failed to load profile details.", "error");
         }
     } catch (err) {
         console.error("Profile load error:", err.message);
+        showToast("Error retrieving configuration settings.", "error");
     }
 
     // LOGOUT

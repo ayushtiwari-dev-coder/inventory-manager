@@ -48,8 +48,16 @@ export async function apiRequest(endpoint, method="GET", data=null, auth=true){
             throw new Error("Invalid JSON response");
         }
 
+        // REPLACE THIS BLOCK IN apiRequest:
         if(!response.ok){
-            throw new Error(result.detail || "API Error");
+            let errMsg = "API Error";
+            if (result.detail) {
+                // Handle both string details and dictionary details from FastAPI
+                errMsg = typeof result.detail === 'string' ? result.detail : (result.detail.message || "Unknown error");
+            } else if (result.message) {
+                errMsg = result.message;
+            }
+            throw new Error(errMsg);
         }
 
         return result;
@@ -173,30 +181,24 @@ export function configureModalFields(mode){
 
 }
 export async function handleSubmit(button, apiCall, onSuccess){
-
-    setLoading(button,true)
-    button.innerText = "Processing...";
-
+    setLoading(button, true);
     try{
-
         const result = await apiCall();
-
         if(result.status === "success"){
             onSuccess(result);
-        }else{
-            alert(result.status);
+            showToast(result.message || "Success!", "success");
+        } else {
+            // Catches any standard 200 OK responses that are actually logic errors
+            showToast(result.message || "An error occurred", "error");
         }
-
-    }catch(err){
-
-        alert(err.message);
-
-    }finally{
-
-    setLoading(button,false);
+    } catch(err){
+        // Catches 400/401/500 errors thrown by apiRequest
+        showToast(err.message, "error");
+    } finally{
+        setLoading(button, false);
     }
-
 }
+
 export function showLoader(){
 
     const loader = document.getElementById("loading-overlay");
@@ -403,4 +405,51 @@ export function validateInputs(data){
             throw new Error("Password must contain a special character");
         }
     }
+
+    
+    if(data.stock_change !== undefined){
+        const sc = Number(data.stock_change);
+        if(!Number.isInteger(sc)){
+            throw new Error("Stock change must be a whole number");
+        }
+        if(sc === 0){
+            throw new Error("Stock change value cannot be zero");
+        }
+        // Prevent huge input deltas that could cause overflow
+        if(sc > 9999999 || sc < -9999999){
+            throw new Error("Stock change value is too large");
+        }
+    }
+    if(data.stock_change !== undefined){
+        const sc = Number(data.stock_change);
+        if(!Number.isInteger(sc)){
+            throw new Error("Stock change must be a whole number");
+        }
+        if(sc === 0){
+            throw new Error("Stock change value cannot be zero");
+        }
+        // Prevent huge input deltas that could cause overflow
+        if(sc > 9999999 || sc < -9999999){
+            throw new Error("Stock change value is too large");
+        }
+    }
+}
+
+export function showToast(message, type = "error") {
+    const container = document.getElementById("toast-container");
+    if (!container) return;
+
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = message;
+
+    container.appendChild(toast);
+
+    // Auto-remove after 3 seconds
+    setTimeout(() => {
+        toast.classList.add("fade-out");
+        toast.addEventListener("animationend", () => {
+            toast.remove();
+        });
+    }, 3000);
 }

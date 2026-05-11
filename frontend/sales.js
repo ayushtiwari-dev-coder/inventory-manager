@@ -1,6 +1,6 @@
 
 import { store,actions } from "./store.js";
-import { apiRequest, closeModal, clearInputs } from "./helping.js";
+import { apiRequest, closeModal, clearInputs,showToast } from "./helping.js";
 import { renderProductsInSaleMode,renderProductsNormal } from "./products.js";
 
 // ── Internal state ──────────────────────────────────────────
@@ -23,7 +23,7 @@ export function enterSaleMode() {
 export function exitSaleMode() {
     _saleMode = false;
     _cart = [];
-    document.dispatchEvent(new Event("exitSaleMode"));      // products.js re-renders rows
+    document.dispatchEvent(new Event("exitSaleMode"));      
     _showNormalUI();
     _hideCartView();
 }
@@ -54,9 +54,8 @@ export function isInCart(productId) {
 // Cart view (STATE 3)
 
 export function showCartView() {
-
     if (_cart.length === 0) {
-        alert("Your cart is empty. Click product rows to add items.");
+        showToast("Your cart is empty. Click product rows to add items.", "info");
         return;
     }
 
@@ -112,15 +111,15 @@ function _renderCartTable() {
             let val = parseInt(e.target.value);
             const maxStock = _cart[idx].stock;
 
-            if (isNaN(val) || val < 1) { 
-                alert(`selling quantity cannot be negative or zero`)
-                val = 1; 
+            if (isNaN(val) || val < 1) {
+                showToast("Quantity cannot be negative or zero.", "error");
+                val = 1;
                 e.target.value = 1;
-             }
-            if (val > maxStock) { 
-                alert(`Only ${maxStock} items available in stock`)
-                val = maxStock; 
-                e.target.value = maxStock; 
+            }
+            if (val > maxStock) {
+                showToast(`Only ${maxStock} items available in stock.`, "error");
+                val = maxStock;
+                e.target.value = maxStock;
             }
 
             _cart[idx].quantity = val;
@@ -147,18 +146,18 @@ function _renderCartTable() {
 
 export async function submitCart() {
     if (_cart.length === 0) {
-        alert("Cart is empty.");
+        showToast("Cart is empty.", "error");
         return;
     }
 
     // Validate quantities
     for (const item of _cart) {
         if (item.quantity <= 0) {
-            alert(`Invalid quantity for ${item.product_name}`);
+            showToast(`Invalid quantity for ${item.product_name}`, "error");
             return;
         }
         if (item.quantity > item.stock) {
-            alert(`Quantity for ${item.product_name} exceeds stock (${item.stock})`);
+            showToast(`Quantity for ${item.product_name} exceeds stock (${item.stock})`, "error");
             return;
         }
     }
@@ -171,7 +170,7 @@ export async function submitCart() {
     try {
         const result = await apiRequest("/sales", "POST", { items });
         if (result.status === "success") {
-            alert(`Sale recorded!\nTotal: ₹ ${result.data?.total_sale ?? ""}\nProfit: ₹ ${result.data?.total_profit ?? ""}`);
+            showToast(`Sale recorded! Total: ₹${result.data?.total_sale ?? ""} | Profit: ₹${result.data?.total_profit ?? ""}`, "success");
 
             // 1. Mutate the cache locally (Optimistic update)
             _cart.forEach(cartitem => {

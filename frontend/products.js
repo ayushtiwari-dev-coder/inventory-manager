@@ -8,7 +8,8 @@ import {
     configureModalFields,
     clearInputs,
     validateInputs,
-    resetmodal
+    resetmodal,
+    showToast
 } from "./helping.js";
 
 import {
@@ -63,6 +64,8 @@ const Product = {
         if (sellingVal !== "" && !isNaN(sellingVal)) payload.selling_price = parseFloat(sellingVal);
         if (costVal !== "" && !isNaN(costVal)) payload.cost_price = parseFloat(costVal);
         if (stockVal !== "" && !isNaN(stockVal)) payload.stock_change = parseInt(stockVal);
+
+        validateInputs(payload)
 
         const response = await apiRequest("/products/update", "PUT", payload);
 
@@ -224,7 +227,10 @@ document.addEventListener("click", (e) => {
             if (confirmed) {
                 Product.delete().then(res => {
                     if (res.status === "success") {
+                        showToast("Product deleted successfully.", "success");
                         document.dispatchEvent(new Event("reloadProducts"));
+                    } else {
+                        showToast(res.message || "Failed to delete product.", "error");
                     }
                 });
             }

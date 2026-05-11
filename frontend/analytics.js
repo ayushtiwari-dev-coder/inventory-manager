@@ -1,4 +1,4 @@
-import { apiRequest } from "./helping.js";
+import { apiRequest,showToast } from "./helping.js";
 import { store, actions } from "./store.js";
 
 let revenueChart = null;
@@ -11,24 +11,20 @@ let currentTable="top";
 export async function checkLowStock() {
     try {
         const result = await apiRequest("/alerts/low-stock", "GET");
-
         if (result.status === "success") {
             const products = result.data;
-
             if (products.length > 0) {
-
-                let names = products.map(p => `${p.product_name} (stock: ${p.stock})`).join("\n");
-
-                alert(
-                    `LOW STOCK ALERT ⚠️
-
-The following products are running low:
-
-${names}`
-                );
+                // Generate a clean vertical list (top-to-down layout)
+                let listHtml = `<strong style="display: block; margin-bottom: 8px;">⚠️ Low Stock Warning:</strong>`;
+                listHtml += `<div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem;">`;
+                products.forEach(p => {
+                    listHtml += `<div>• ${p.product_name} <span style="opacity: 0.85;">(Stock: ${p.stock})</span></div>`;
+                });
+                listHtml += `</div>`;
+                
+                showToast(listHtml, "info");
             }
         }
-
     } catch (err) {
         console.error("Low stock check failed:", err.message);
     }
