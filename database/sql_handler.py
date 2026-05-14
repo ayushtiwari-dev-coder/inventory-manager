@@ -341,6 +341,16 @@ class Database:
     def create_tables():
         db = get_connection()
         cursor = db.cursor()
+
+        organizations_table = """
+        CREATE TABLE IF NOT EXISTS organizations (
+            org_id INT AUTO_INCREMENT PRIMARY KEY,
+            org_name VARCHAR(100) NOT NULL,
+            join_code VARCHAR(20) UNIQUE NOT NULL,
+            owner_id INT NOT NULL
+        );
+        """
+
         user_table = """
         CREATE TABLE IF NOT EXISTS users (
             user_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -349,7 +359,10 @@ class Database:
             name VARCHAR(50),
             lock_until INT DEFAULT 0,
             password_hash VARCHAR(255) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            org_id INT,
+            role ENUM('OWNER', 'MANAGER', 'EMPLOYEE') DEFAULT 'EMPLOYEE',
+            FOREIGN KEY(org_id) REFERENCES organizations(org_id) ON DELETE CASCADE
         );
         """
 
@@ -362,9 +375,11 @@ class Database:
             stock INT NOT NULL,
             profit_margin DECIMAL(15,2) NOT NULL,
             cost_price DECIMAL (15,2) NOT NULL,
+            org_id INT NOT NULL,
             UNIQUE(user_id, product_name),
 
-            FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+            FOREIGN KEY(org_id) REFERENCES organizations(org_id) ON DELETE CASCADE
         );
         """
 
@@ -376,7 +391,9 @@ class Database:
             total_sale DECIMAL(15,2) NOT NULL,
             sale_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             discount DECIMAL(15,2) DEFAULT 0,
+            org_id INT NOT NULL,
             FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+            FOREIGN KEY(org_id) REFERENCES organizations(org_id) ON DELETE CASCADE,
 
             INDEX idx_sales_user (user_id),
             INDEX idx_sales_time (sale_time)
@@ -399,6 +416,7 @@ class Database:
             INDEX idx_sale_items_product (product_id)
         );
         """
+        cursor.execute(organizations_table)
         cursor.execute(user_table)
         cursor.execute(product_table)
         cursor.execute(sales_table)
