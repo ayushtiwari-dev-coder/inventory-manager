@@ -100,25 +100,40 @@ def create_account(username, password, name):
             "message": "Password too long"
         }
 
-    if not any(c.isupper() for c in password):
+    has_uppercase = False
+    has_digit = False
+    has_special = False
+    has_space = False
+
+    for c in password:
+        if c.isupper():
+            has_uppercase = True
+        elif c.isdigit():
+            has_digit = True
+        elif not c.isalnum():
+            has_special = True
+            if c == " ":
+                has_space = True
+
+    if not has_uppercase:
         return {
             "status": "error",
             "message": "Password must contain uppercase letter"
         }
 
-    if not any(c.isdigit() for c in password):
+    if not has_digit:
         return {
             "status": "error",
             "message": "Password must contain number"
         }
 
-    if not any(not c.isalnum() for c in password):
+    if not has_special:
         return {
             "status": "error",
             "message": "Password must contain special character"
         }
 
-    if " " in password:
+    if has_space:
         return {
             "status": "error",
             "message": "Password cannot contain spaces"
