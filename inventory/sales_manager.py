@@ -1,11 +1,8 @@
 from database.sql_handler import Sale
 
-from database.sql_handler import Sale
-
-def record_sale(user_id, items):
-    result = Sale.record_sale(user_id, items)
+def record_sale(org_id, user_id, username, items):
+    result = Sale.record_sale(org_id, user_id, username, items)
     
-
     if result.get("status") == "error":
         return result
         
@@ -17,12 +14,14 @@ def record_sale(user_id, items):
         }
     }
 
-def get_recent_sales(user_id):
-    result = Sale.get_recent_sales(user_id)
+def get_recent_sales(org_id):
+    result = Sale.get_recent_sales(org_id)
+    
     if not result:
         return {
             "status": "no_sales"
         }
+        
     return {
         "status": "success",
         "sales": result

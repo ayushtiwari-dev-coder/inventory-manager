@@ -1,83 +1,36 @@
 import os
-from datetime import datetime, timedelta, timezone
-from typing import Annotated
-
-import jwt
-from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordBearer
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from typing import List, Optional
+
+# --- NEW SECURITY IMPORTS ---
+from security.auth_deps import get_current_user, get_org_access, RequireRole, create_passport
 
 # --- LOGIC IMPORTS ---
-from database.sql_handler import Database,User
-from auth.login_logic import create_account, login
-from inventory.product_manager import (
-    get_products, add_product, delete_product,update_product_full
-)
-from inventory.sales_manager import record_sale,get_recent_sales
-from analytics.report import analytics
+from database.sql_handler import Database, User, Product, Sale
+from database.org_manager import OrgManager
+from auth import login_logic
+from analytics.report import ReportManager
 from controller_inventory import get_low_stock_products
 
 # --- INITIALIZATION ---
-load_dotenv()
 app = FastAPI()
-
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:3000",
-        "http://localhost:3000",
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-        "https://inventory-manager-fs9t.onrender.com"
-        
-    ],
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-SECRET_KEY = os.getenv("SECRET_KEY") 
-ALGORITHM = "HS256"
 
-# This looks for the token in the "Authorization" header
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
+# Initialize Database tables
 Database.create_tables()
 
-# --- THE TOKEN FACTORY ---
 
-def create_passport(user_id: int):
-    """
-    Creates a signed 5-day ID card (Token).
-    """
-    expire = datetime.now(timezone.utc) + timedelta(days=5)
-    token_data = {"user_id": user_id, "exp": expire}
-    token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
-    return token
-
-# --- SECURITY HELPERS (The Gatekeeper) ---
-
-def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
-    """
-    Decodes the token. If it's fake or expired, it throws a 401 error.
-    """
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: int = payload.get("user_id")
-        
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid ID card")
-        return {"user_id": user_id}
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired! Log in again.")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
-
-# --- REQUEST MODELS ---
-
+# --- REQUEST MODELS (Pydantic Schemas) ---
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -86,6 +39,17 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     name: str
+    master_code: str  # Added for your gatekeeper
+
+class WorkspaceSelect(BaseModel):
+    org_id: int
+
+class CreateOrgRequest(BaseModel):
+    org_name: str
+    owner_gmail: Optional[str] = None
+
+class JoinOrgRequest(BaseModel):
+    join_code: str
 
 class ProductCreate(BaseModel):
     product_name: str
@@ -103,139 +67,150 @@ class SaleItem(BaseModel):
     product_id: int
     quantity: int
 
-
 class SaleCreate(BaseModel):
-    items: list[SaleItem]
+    items: List[SaleItem]
 
-# --- AUTH ROUTES ---
 
-@app.post("/login")
-def user_login(data: LoginRequest):
-    result = login(data.username, data.password)
-    
-
-    if result.get("status") != "success":
-        raise HTTPException(status_code=401, detail=result)
-
-    user_data = result["data"]
-    user_id = user_data["user_id"]
-
-    token = create_passport(user_id)
-
-    return {
-        "status": "success",
-        "token": token,
-        "name": user_data["name"],
-        "username": user_data["username"]
-    }
+# ==========================================
+# 1. AUTHENTICATION & IDENTITY (Unprotected)
+# ==========================================
 
 @app.post("/register")
 def register(data: RegisterRequest):
-    result = create_account(data.username, data.password, data.name)
-
+    result = login_logic.create_account(data.username, data.password, data.name, data.master_code)
     if result.get("status") != "success":
         raise HTTPException(status_code=400, detail=result.get("message", "Registration failed"))
+    return result
 
+@app.post("/login")
+def user_login(data: LoginRequest):
+    result = login_logic.login(data.username, data.password)
+    if result.get("status") != "success":
+        raise HTTPException(status_code=401, detail=result.get("message"))
+    
     user_data = result["data"]
-    user_id = user_data["user_id"]
-
-    token = create_passport(user_id)
-
+    
+    # 1. Issue GLOBAL Token only (No org_id, no role)
+    global_token = create_passport(
+        user_id=user_data["user_id"], 
+        username=user_data["username"]
+    )
+    
     return {
-        "status": "success",
-        "token": token,
-        "name": user_data["name"],
-        "username": user_data["username"]
+        "status": "success", 
+        "global_token": global_token, 
+        "data": user_data  # Contains the 'workspaces' array
     }
 
 
-# --- PROTECTED PRODUCT ROUTES ---
+# ==========================================
+# 2. WORKSPACE SELECTION (Global Token Required)
+# ==========================================
 
-# profile routes
-
-@app.get("/profile")
-def profile(user: dict = Depends(get_current_user)):
-    result=User.get_user_by_id(user["user_id"])
-    if not result:
-        return {"status":"error"}
-    return{
-        "status":"success",
-        "data":{
-            "username":result["username"],
-            "name":result["name"]
-        }
+@app.post("/auth/workspace/select")
+def select_workspace(data: WorkspaceSelect, user: dict = Depends(get_current_user)):
+    """Exchanges a Global Token for an Org-Scoped Token"""
+    result = login_logic.activate_workspace(user["user_id"], data.org_id)
+    
+    if result["status"] == "error":
+        raise HTTPException(status_code=403, detail=result["message"])
+        
+    org_data = result["data"]
+    
+    # Mint ORG-SCOPED Token
+    org_token = create_passport(
+        user_id=user["user_id"], 
+        username=user["username"],
+        org_id=org_data["org_id"],
+        role=org_data["role"]
+    )
+    
+    return {
+        "status": "success", 
+        "org_token": org_token, 
+        "role": org_data["role"],
+        "org_id": org_data["org_id"]
     }
+
+@app.post("/org/create")
+def create_workspace(data: CreateOrgRequest, user: dict = Depends(get_current_user)):
+    result = OrgManager.create_organization(data.org_name, user["user_id"], data.owner_gmail)
+    if result["status"] == "error":
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
+@app.post("/org/join")
+def join_workspace(data: JoinOrgRequest, user: dict = Depends(get_current_user)):
+    result = OrgManager.join_organization(user["user_id"], data.join_code)
+    if result["status"] == "error":
+        raise HTTPException(status_code=400, detail=result["message"])
+    return result
+
+
+# ==========================================
+# 3. INVENTORY ROUTES (Org-Scoped Token Required)
+# ==========================================
 
 @app.get("/products")
-def view_products_api(user: dict = Depends(get_current_user)):
-    return get_products(user["user_id"])
+def view_products_api(user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
+    return Product.get_all_products(user["org_id"])
 
 @app.post("/products")
-def create_product(data: ProductCreate, user: dict = Depends(get_current_user)):
-    return add_product(
-        user["user_id"],
-        data.product_name,
-        data.selling_price,
-        data.stock,
-        data.cost_price
+def create_product(data: ProductCreate, user: dict = Depends(RequireRole(["owner", "manager"]))):
+    result = Product.add_product(
+        org_id=user["org_id"], user_id=user["user_id"], username=user["username"],
+        product_name=data.product_name, selling_price=data.selling_price, 
+        stock=data.stock, cost_price=data.cost_price
     )
+    if result.get("status") != "success":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
 
 @app.put("/products/update")
-def update_product_api(data: ProductUpdate, user: dict = Depends(get_current_user)):
-    return update_product_full(
-        user["user_id"],
-        data.product_id,
-        data.selling_price,
-        data.cost_price,
-        data.stock_change
+def update_product_api(data: ProductUpdate, user: dict = Depends(RequireRole(["owner", "manager"]))):
+    result = Product.update_full_product(
+        org_id=user["org_id"], user_id=user["user_id"], username=user["username"],
+        product_id=data.product_id, selling_price=data.selling_price, 
+        cost_price=data.cost_price, stock_change=data.stock_change
     )
+    if result.get("status") != "success":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
 
 @app.delete("/products/{product_id}")
-def remove_product(product_id: int, user: dict = Depends(get_current_user)):
-    return delete_product(user["user_id"], product_id)
+def remove_product(product_id: int, user: dict = Depends(RequireRole(["owner", "manager"]))):
+    result = Product.delete_product(user["org_id"], user["user_id"], user["username"], product_id)
+    if result.get("status") != "success":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
 
 
-#  PROTECTED SALES ROUTES
+# ==========================================
+# 4. SALES ROUTES (Org-Scoped Token Required)
+# ==========================================
 
 @app.post("/sales")
-def create_sale(data: SaleCreate, user: dict = Depends(get_current_user)):
-
-    items = [
-        {
-            "product_id": item.product_id,
-            "quantity": item.quantity
-        }
-        for item in data.items
-    ]
-
-    return record_sale(user["user_id"], items)
+def create_sale(data: SaleCreate, user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
+    items = [{"product_id": item.product_id, "quantity": item.quantity} for item in data.items]
+    result = Sale.record_sale(user["org_id"], user["user_id"], user["username"], items)
+    if result.get("status") != "success":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
 
 @app.get("/sales/recent")
-def recent_sales(user: dict = Depends(get_current_user)):
+def recent_sales(user: dict = Depends(RequireRole(["owner", "manager"]))):
+    return Sale.get_recent_sales(user["org_id"])
 
-    return get_recent_sales(user["user_id"])
 
-# --- PROTECTED ANALYTICS ROUTES ---
-
-@app.get("/analytics/sales-trend")
-def sales_trend(months: int = 4, user: dict = Depends(get_current_user)):
-    return analytics.sales_trend(user["user_id"], months)
-
-@app.get("/analytics/top-products")
-def top_products(limit: int = 10, user: dict = Depends(get_current_user)):
-    return analytics.top_products_by_profit(user["user_id"], limit)
-
-@app.get("/analytics/least-products")
-def least_products(limit: int = 10, user: dict = Depends(get_current_user)):
-    return analytics.least_sold_products(user["user_id"], limit)
-
-@app.get("/analytics/revenue")
-def revenue(period: str=None,user: dict = Depends(get_current_user)):
-    return analytics.revenue_summary(user["user_id"],period)
+# ==========================================
+# 5. ANALYTICS ROUTES (Org-Scoped Token Required)
+# ==========================================
 
 @app.get("/alerts/low-stock")
-def low_stock(user: dict = Depends(get_current_user)):
-    return get_low_stock_products(user["user_id"])
+def low_stock(user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
+    # Using the controller we mapped earlier
+    return get_low_stock_products(user["org_id"])
 
+# (Add your other analytics routes here wrapping them with RequireRole(["owner", "manager"]))
 
-app.mount("/",StaticFiles(directory="frontend",html=True),name="frontend")
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
