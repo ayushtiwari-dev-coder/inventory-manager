@@ -80,3 +80,19 @@ def update_product_full(org_id, user_id, username, product_id, selling_price=Non
 def delete_product(org_id, user_id, username, product_id):
     result = Product.delete_product(org_id, user_id, username, product_id)
     return result
+
+
+def get_low_stock_products(org_id, threshold=40):
+    low_stock = Product.get_all_products(org_id, low_stock_threshold=threshold)
+    
+    if not low_stock:
+        return {
+            "status": "success",
+            "data": [],
+            "message": "No low stock products"
+        }
+        
+    return {
+        "status": "success",
+        "data": low_stock
+    }

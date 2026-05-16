@@ -50,7 +50,7 @@ class analytics:
         JOIN products p ON si.product_id = p.product_id
         WHERE s.org_id=%s AND s.is_active=1 AND p.is_active=1
         GROUP BY p.product_id, p.product_name
-        ORDER BY total_profit ASC
+        ORDER BY total_quantity ASC
         LIMIT %s
         """
         results = DatabaseHelper.execute_query(

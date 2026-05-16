@@ -103,11 +103,7 @@ def get_org_access(token: Annotated[str, Depends(oauth2_scheme)]):
 
 # 2. THE CHECKER FUNCTION (FastAPI Dependency)
 class RequireRole:
-    """
-    This class acts as a filter on your main.py routes. 
-    It takes a list of allowed roles, checks the current user's role from the token,
-    and blocks them if they aren't on the list.
-    """
+    
     def __init__(self, allowed_roles: list):
         self.allowed_roles = allowed_roles
 

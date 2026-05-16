@@ -2,25 +2,29 @@ import os
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 
-# --- NEW SECURITY IMPORTS ---
+# --- SECURITY & GATEKEEPERS ---
 from security.auth_deps import get_current_user, get_org_access, RequireRole, create_passport
 
-# --- LOGIC IMPORTS ---
-from database.sql_handler import Database, User, Product, Sale
+# --- LOGIC MANAGERS (Bypass Fixed) ---
+from database.sql_handler import Database
 from database.org_manager import OrgManager
 from auth import login_logic
-from analytics.report import ReportManager
-from controller_inventory import get_low_stock_products
+from inventory import product_manager, sales_manager
+from analytics.report import analytics
 
 # --- INITIALIZATION ---
-app = FastAPI()
+app = FastAPI(title="Multi-Tenant Inventory SaaS")
 
+# 1. CORS Fixed: Browsers will now accept credentialed tokens cleanly
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,7 +34,43 @@ app.add_middleware(
 Database.create_tables()
 
 
-# --- REQUEST MODELS (Pydantic Schemas) ---
+# GLOBAL EXCEPTION HANDLERS
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc: RequestValidationError):
+    error_details = exc.errors()
+    if error_details:
+        loc = error_details[0].get("loc", ["input"])[-1]
+        msg = error_details[0].get("msg", "Invalid input configuration value")
+        clean_message = f"Validation Error: Field '{loc}' failed validation - {msg}."
+    else:
+        clean_message = "Validation Error: Provided request payload does not match expected model schema."
+
+    return JSONResponse(
+        status_code=422,
+        content={"status": "error", "message": clean_message}
+    )
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc: StarletteHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"status": "error", "message": exc.detail}
+    )
+
+@app.exception_handler(Exception)
+async def universal_generic_exception_handler(request, exc: Exception):
+    print(f"CRITICAL SYSTEM ERROR LOG: {str(exc)}")
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "message": "An unexpected system exception occurred inside the core server pipeline."}
+    )
+
+
+# REQUEST MODELS (Pydantic Schemas)
+
+
 class LoginRequest(BaseModel):
     username: str
     password: str
@@ -39,7 +79,7 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     name: str
-    master_code: str  # Added for your gatekeeper
+    master_code: str
 
 class WorkspaceSelect(BaseModel):
     org_id: int
@@ -71,9 +111,8 @@ class SaleCreate(BaseModel):
     items: List[SaleItem]
 
 
-# ==========================================
+
 # 1. AUTHENTICATION & IDENTITY (Unprotected)
-# ==========================================
 
 @app.post("/register")
 def register(data: RegisterRequest):
@@ -89,35 +128,26 @@ def user_login(data: LoginRequest):
         raise HTTPException(status_code=401, detail=result.get("message"))
     
     user_data = result["data"]
-    
-    # 1. Issue GLOBAL Token only (No org_id, no role)
-    global_token = create_passport(
-        user_id=user_data["user_id"], 
-        username=user_data["username"]
-    )
+    global_token = create_passport(user_id=user_data["user_id"], username=user_data["username"])
     
     return {
         "status": "success", 
         "global_token": global_token, 
-        "data": user_data  # Contains the 'workspaces' array
+        "data": user_data 
     }
 
 
-# ==========================================
+
 # 2. WORKSPACE SELECTION (Global Token Required)
-# ==========================================
+
 
 @app.post("/auth/workspace/select")
 def select_workspace(data: WorkspaceSelect, user: dict = Depends(get_current_user)):
-    """Exchanges a Global Token for an Org-Scoped Token"""
     result = login_logic.activate_workspace(user["user_id"], data.org_id)
-    
     if result["status"] == "error":
         raise HTTPException(status_code=403, detail=result["message"])
         
     org_data = result["data"]
-    
-    # Mint ORG-SCOPED Token
     org_token = create_passport(
         user_id=user["user_id"], 
         username=user["username"],
@@ -147,17 +177,19 @@ def join_workspace(data: JoinOrgRequest, user: dict = Depends(get_current_user))
     return result
 
 
-# ==========================================
+
 # 3. INVENTORY ROUTES (Org-Scoped Token Required)
-# ==========================================
+
 
 @app.get("/products")
 def view_products_api(user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
-    return Product.get_all_products(user["org_id"])
+    # Now routed safely through the Manager Layer!
+    return product_manager.get_products(user["org_id"])
 
 @app.post("/products")
 def create_product(data: ProductCreate, user: dict = Depends(RequireRole(["owner", "manager"]))):
-    result = Product.add_product(
+    # Validation constraints run cleanly via the Manager
+    result = product_manager.add_product(
         org_id=user["org_id"], user_id=user["user_id"], username=user["username"],
         product_name=data.product_name, selling_price=data.selling_price, 
         stock=data.stock, cost_price=data.cost_price
@@ -168,7 +200,7 @@ def create_product(data: ProductCreate, user: dict = Depends(RequireRole(["owner
 
 @app.put("/products/update")
 def update_product_api(data: ProductUpdate, user: dict = Depends(RequireRole(["owner", "manager"]))):
-    result = Product.update_full_product(
+    result = product_manager.update_product_full(
         org_id=user["org_id"], user_id=user["user_id"], username=user["username"],
         product_id=data.product_id, selling_price=data.selling_price, 
         cost_price=data.cost_price, stock_change=data.stock_change
@@ -179,38 +211,40 @@ def update_product_api(data: ProductUpdate, user: dict = Depends(RequireRole(["o
 
 @app.delete("/products/{product_id}")
 def remove_product(product_id: int, user: dict = Depends(RequireRole(["owner", "manager"]))):
-    result = Product.delete_product(user["org_id"], user["user_id"], user["username"], product_id)
+    result = product_manager.delete_product(user["org_id"], user["user_id"], user["username"], product_id)
     if result.get("status") != "success":
         raise HTTPException(status_code=400, detail=result.get("message"))
     return result
 
 
-# ==========================================
+
 # 4. SALES ROUTES (Org-Scoped Token Required)
-# ==========================================
+
 
 @app.post("/sales")
 def create_sale(data: SaleCreate, user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
     items = [{"product_id": item.product_id, "quantity": item.quantity} for item in data.items]
-    result = Sale.record_sale(user["org_id"], user["user_id"], user["username"], items)
+    
+    # Validation intercepts safely via sales_manager
+    result = sales_manager.record_sale(user["org_id"], user["user_id"], user["username"], items)
     if result.get("status") != "success":
         raise HTTPException(status_code=400, detail=result.get("message"))
     return result
 
 @app.get("/sales/recent")
 def recent_sales(user: dict = Depends(RequireRole(["owner", "manager"]))):
-    return Sale.get_recent_sales(user["org_id"])
+    return sales_manager.get_recent_sales(user["org_id"])
 
 
-# ==========================================
+
 # 5. ANALYTICS ROUTES (Org-Scoped Token Required)
-# ==========================================
+
 
 @app.get("/alerts/low-stock")
 def low_stock(user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
-    # Using the controller we mapped earlier
-    return get_low_stock_products(user["org_id"])
+    return product_manager.get_low_stock_products(user["org_id"])
 
-# (Add your other analytics routes here wrapping them with RequireRole(["owner", "manager"]))
+# (For the future: Just add your other analytics.py routes here wrapped with RequireRole(["owner", "manager"]))
 
+# App mount for the frontend folder
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
