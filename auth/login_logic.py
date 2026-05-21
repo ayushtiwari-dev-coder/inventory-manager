@@ -78,7 +78,7 @@ def login(username, password):
     """Authenticates the user and returns their multi-tenant organization context."""
     user = User.get_user(username)
     
-    if not user:
+    if not user or "status" in user or "password_hash" not in user:
         return {"status": "error", "message": "Username does not exist"}
 
     current_time = int(time.time())

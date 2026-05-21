@@ -1,3 +1,4 @@
+import re
 import os
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel,field_validator,Field
 from typing import List, Optional
 
 # --- SECURITY & GATEKEEPERS ---
@@ -84,9 +85,37 @@ class RegisterRequest(BaseModel):
 class WorkspaceSelect(BaseModel):
     org_id: int
 
+import re
+from pydantic import BaseModel, Field, field_validator
+
+# ...
+
 class CreateOrgRequest(BaseModel):
-    org_name: str
+    org_name: str = Field(..., min_length=1, max_length=40)
     owner_gmail: Optional[str] = None
+
+    @field_validator('org_name')
+    @classmethod
+    def check_org_name_syntax(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError('Organization name cannot be empty or pure whitespace')
+        # Ensure regex checks alphanumeric, space, and hyphen matching your JavaScript file
+        if not re.match(r"^[a-zA-Z0-9\s-]+$", stripped):
+            raise ValueError('Organization name can only contain alphanumeric characters, spaces, and dashes')
+        return stripped
+
+    @field_validator('owner_gmail')
+    @classmethod
+    def check_gmail_syntax(cls, value: Optional[str]) -> Optional[str]:
+        if value is None or value.strip() == "":
+            return None
+        
+        clean_email = value.strip().lower()
+        email_regex = r"^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+        if not re.match(email_regex, clean_email):
+            raise ValueError('Invalid email syntax formatting provided')
+        return clean_email
 
 class JoinOrgRequest(BaseModel):
     join_code: str
@@ -244,7 +273,5 @@ def recent_sales(user: dict = Depends(RequireRole(["owner", "manager"]))):
 def low_stock(user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
     return product_manager.get_low_stock_products(user["org_id"])
 
-# (For the future: Just add your other analytics.py routes here wrapped with RequireRole(["owner", "manager"]))
 
-# App mount for the frontend folder
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+# app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

@@ -13,6 +13,7 @@ class OrgManager:
     def create_organization(org_name, owner_id, owner_gmail=None):
         manager_code = OrgManager.generate_join_code()
         employee_code = OrgManager.generate_join_code()
+
         
         db = get_connection()
         cursor = db.cursor()

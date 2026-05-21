@@ -160,7 +160,7 @@ class Product:
     def get_all_products(org_id, low_stock_threshold=None, sort_by_stock=False):
         if low_stock_threshold is not None:
             query = """
-            SELECT product_id, product_name, mrp, stock, profit_margin
+            SELECT product_id, product_name, mrp, stock, profit_margin,cost_price
             FROM products
             WHERE org_id = %s AND stock < %s AND is_active = 1
             ORDER BY stock ASC
@@ -169,7 +169,7 @@ class Product:
         
         elif sort_by_stock:
             query = """
-            SELECT product_id, product_name, mrp, stock, profit_margin
+            SELECT product_id, product_name, mrp, stock, profit_margin,cost_price
             FROM products
             WHERE org_id = %s AND is_active = 1
             ORDER BY stock DESC
@@ -178,7 +178,7 @@ class Product:
         
         else:
             query = """
-            SELECT product_id, product_name, mrp, stock, profit_margin
+            SELECT product_id, product_name, mrp, stock, profit_margin,cost_price
             FROM products
             WHERE org_id = %s AND is_active = 1
             ORDER BY product_name ASC
