@@ -375,13 +375,18 @@ grid-template-columns:1fr;
     to { transform: translateX(100%); opacity: 0; }
 }
 
-/* Prevent automatic mobile layout zooming on text field focus */
-@media screen and (max-width: 768px) {
-  input, 
-  select, 
-  textarea, 
-  .input-group input, 
-  #product-search {
-    font-size: 16px !important;
-  }
+input, select, textarea{
+    font: size 16px;
+}
+
+@media (max-width: 768px) {
+    th, td {
+        padding: 8px 6px;
+        font-size: 0.82rem;
+    }
+
+    .table-wrapper {
+        padding: 10px;
+        margin-top: 10px;
+    }
 }
