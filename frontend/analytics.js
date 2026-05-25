@@ -37,7 +37,6 @@ export async function loadAnalyticsGraphs() {
 
     // 1. Check if the cache is clean AND we already have this specific dropdown timeframe cached
     if (!store.analytics.isDirty && store.analytics.timeframes[months]) {
-        console.log(`Serving analytics for ${months} months from Cache!`);
         const cached = store.analytics.timeframes[months];
         renderRevenueChart(cached.dates, cached.revenue);
         renderProfitChart(cached.dates, cached.profit);

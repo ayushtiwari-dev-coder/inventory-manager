@@ -14,7 +14,6 @@ export async function loadprofile(){
 
     // If profile is already cached, render it instantly and skip the API request
     if (store.profile) {
-        console.log("Serving profile settings from Cache!");
         usernameField.innerText = store.profile.username;
         nameField.innerText = store.profile.name;
         return;

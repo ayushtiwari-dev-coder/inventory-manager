@@ -374,3 +374,14 @@ grid-template-columns:1fr;
     from { transform: translateX(0); opacity: 1; }
     to { transform: translateX(100%); opacity: 0; }
 }
+
+/* Prevent automatic mobile layout zooming on text field focus */
+@media screen and (max-width: 768px) {
+  input, 
+  select, 
+  textarea, 
+  .input-group input, 
+  #product-search {
+    font-size: 16px !important;
+  }
+}
