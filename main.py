@@ -238,4 +238,21 @@ def low_stock(user: dict = Depends(get_current_user)):
     return get_low_stock_products(user["user_id"])
 
 
+@app.get("/health")
+def health_check_endpoint():
+    return {"status": "alive", "msg": "Standard system pulse"}
+
+@app.get("/timepass")
+def timepass_endpoint():
+    return {"status": "chilling", "msg": "Just wasting CPU cycles"}
+
+@app.get("/wow")
+def wow_endpoint():
+    return {"status": "amazing", "msg": "Stupid endpoint activated"}
+
+@app.get("/dummy")
+def dummy_endpoint():
+    return {"status": "ok", "msg": "Nothing to see here"}
+
+
 app.mount("/",StaticFiles(directory="frontend",html=True),name="frontend")
