@@ -264,9 +264,29 @@ def create_sale(data: SaleCreate, user: dict = Depends(RequireRole(["owner", "ma
 def recent_sales(user: dict = Depends(RequireRole(["owner", "manager"]))):
     return sales_manager.get_recent_sales(user["org_id"])
 
+@app.get("/analytics/revenue")
+def get_revenue_summary(period: Optional[str] = None, user: dict = Depends(RequireRole(["owner", "manager"]))):
+    # This calls your existing database query that calculates total_transactions, total_revenue, and total_profit
+    return analytics.revenue_summary(user["org_id"], period)
 
 
 # 5. ANALYTICS ROUTES (Org-Scoped Token Required)
+
+# Insert under: # 5. ANALYTICS ROUTES (Org-Scoped Token Required)
+
+@app.get("/analytics/top-profitable")
+def get_top_profitable(user: dict = Depends(RequireRole(["owner", "manager"]))):
+    
+    return analytics.top_products_by_profit(user["org_id"])
+
+@app.get("/analytics/least-sold")
+def get_least_sold(user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
+    
+    return analytics.least_sold_products(user["org_id"])
+
+@app.get("/analytics/trend")
+def get_sales_trend(months: int=4,user: dict = Depends(RequireRole(["owner", "manager"]))):
+    return analytics.sales_trend(user["org_id"],months)
 
 
 @app.get("/alerts/low-stock")

@@ -65,38 +65,40 @@ class analytics:
     def revenue_summary(org_id, period=None):
         if period == "daily":
             date_filter = "AND DATE(sale_time)=CURDATE()"
+        elif period == "weekly":
+            date_filter = "AND Week(sale_time)=WEEK(CURDATE()) AND YEAR(sale_time)=YEAR(CURDATE())"
         elif period == "monthly":
             date_filter = "AND MONTH(sale_time)=MONTH(CURDATE()) AND YEAR(sale_time)=YEAR(CURDATE())"
+        elif period == "3monthly":
+            # Strict Filtering: Only aggregates records where timestamps fall within the last 3 months
+            date_filter = "AND sale_time >= DATE_SUB(CURDATE(), INTERVAL 3 MONTH)"
         elif period == "yearly":
             date_filter = "AND YEAR(sale_time)=YEAR(CURDATE())"
-        elif period == "weekly":
-            date_filter = "AND WEEK(sale_time)=WEEK(CURDATE()) AND YEAR(sale_time)=YEAR(CURDATE())"
         else:
             date_filter = ""
 
         query = f"""
-        SELECT
-            COUNT(sale_id) AS total_transactions,
-            SUM(total_sale) AS total_revenue,
-            SUM(total_profit) AS total_profit
-        FROM sales
-        WHERE org_id = %s AND is_active = 1
-        {date_filter}
+            SELECT 
+                COUNT(sale_id) AS total_transactions,
+                SUM(total_sale) AS total_revenue,
+                SUM(total_profit) AS total_profit
+            FROM sales
+            WHERE org_id = %s AND is_active = 1
+            {date_filter}
         """
-        result = DatabaseHelper.execute_query(
-            query, (org_id,), fetch_type=2
-        )
+        result = DatabaseHelper.execute_query(query, (org_id,), fetch_type=2)
         
         if not result or result.get("total_transactions") == 0:
             return {
                 "status": "error",
                 "message": "No sales data found"
             }
+
         return {
             "status": "success",
             "data": result
         }
-
+    
     @staticmethod
     def sales_trend(org_id, months=4):
         query = """

@@ -4,6 +4,7 @@ import { productApi } from '../services/productApi';
 import { salesApi } from '../services/salesApi';
 import { useApi } from '../hooks/useApi';
 import { useToast } from '../context/ToastContext';
+import { useSalesCache } from '../context/CacheContext';
 import { validateProductInput } from '../utils/validators';
 import ProductFormModal from '../components/ProductFormModal';
 import CartModal from '../components/CartModal'; // We will build this next!
@@ -21,6 +22,8 @@ export default function ProductsPage() {
   const [isCartModalOpen, setIsCartModalOpen] = useState(false);
 
   const showToast = useToast();
+
+  const {invalidateSalesCache,invalidateLogsCacahe}=useSalesCache();
 
   // Async Layer Hooks via useApi State Machines
   const { data: productsData, loading: fetchLoading, execute: fetchInventory } = useApi(productApi.getProducts);
@@ -47,45 +50,47 @@ export default function ProductsPage() {
   }, [isSelling]);
 
   const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    const error = validateProductInput(modalState.mode, formFields);
-    if (error) return setModalValidationError(error);
-
-    try {
-      if (modalState.mode === 'add') {
-        await runAddProduct({
-          product_name: formFields.name.trim(),
-          selling_price: parseFloat(formFields.sellingPrice),
-          cost_price: parseFloat(formFields.costPrice),
-          stock: parseInt(formFields.stock, 10)
-        });
-        showToast('Product successfully added to database ledger!', 'success');
-      } else {
-        await runEditProduct({
-          product_id: modalState.currentProduct.product_id,
-          selling_price: parseFloat(formFields.sellingPrice),
-          cost_price: parseFloat(formFields.costPrice),
-          stock_change: parseInt(formFields.stock, 10)
-        });
-        showToast('Inventory item specs scaled successfully.', 'success');
-      }
-      closeModal();
-      fetchInventory();
-    } catch (err) {
-      setModalValidationError(err.message);
-    }
-  };
+        e.preventDefault();
+        const error = validateProductInput(modalState.mode, formFields);
+        if (error) return setModalValidationError(error);
+        try {
+            if (modalState.mode === 'add') {
+                await runAddProduct({
+                    product_name: formFields.name.trim(),
+                    selling_price: parseFloat(formFields.sellingPrice),
+                    cost_price: parseFloat(formFields.costPrice),
+                    stock: parseInt(formFields.stock, 10)
+                });
+                showToast('Product successfully added to database ledger!', 'success');
+                // invalidateLogsCache(); // Marks the Logs page dirty (does NOT touch sales/analytics)
+            } else {
+                await runEditProduct({
+                    product_id: modalState.currentProduct.product_id,
+                    selling_price: parseFloat(formFields.sellingPrice),
+                    cost_price: parseFloat(formFields.costPrice),
+                    stock_change: parseInt(formFields.stock, 10)
+                });
+                showToast('Inventory item specs scaled successfully.', 'success');
+                // invalidateLogsCache(); // Marks the Logs page dirty (does NOT touch sales/analytics)
+            }
+            closeModal();
+            fetchInventory();
+        } catch (err) {
+            setModalValidationError(err.message);
+        }
+    };
 
   const handleDelete = async (productId) => {
-    try {
-      await runDeleteProduct(productId);
-      showToast('Item safely detached from active transaction view.', 'success');
-      setInlineDeleteId(null);
-      fetchInventory();
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
-  };
+        try {
+            await runDeleteProduct(productId);
+            showToast('Item safely detached from active transaction view.', 'success');
+            // invalidateLogsCache(); // Marks the Logs page dirty
+            setInlineDeleteId(null);
+            fetchInventory();
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    };
 
   // Cart Operation Management Handlers
   const handleToggleSelectProduct = (product) => {
@@ -101,25 +106,27 @@ export default function ProductsPage() {
   };
 
   const handleCheckoutSubmit = async (cartItems) => {
-    try {
-      // Map frontend elements cleanly to backend structural List[SaleItem] array
-      const itemsPayload = cartItems.map(item => ({
-        product_id: item.product_id,
-        quantity: item.quantity
-      }));
-
-      await runCheckout(itemsPayload);
-      showToast("Transaction authorized and committed successfully!", "success");
-      
-      // Clear out cart and exit POS workflow cleanly
-      setCart([]);
-      setIsCartModalOpen(false);
-      setIsSelling(false);
-      fetchInventory(); // Reload table row numbers
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
-  };
+        try {
+            const itemsPayload = cartItems.map(item => ({
+                product_id: item.product_id,
+                quantity: item.quantity
+            }));
+            await runCheckout(itemsPayload);
+            showToast("Transaction authorized and committed successfully!", "success");
+            
+            // Core invalidation triggers
+            invalidateSalesCache('SALE_COMMITTED'); // Clears cache flags for Sales and Analytics pages
+            // invalidateLogsCache();                 // Clears cache flags for the Logs page
+            
+            // Clear out cart and exit POS workflow cleanly
+            setCart([]);
+            setIsCartModalOpen(false);
+            setIsSelling(false);
+            fetchInventory(); // Reload current page view numbers immediately
+        } catch (err) {
+            showToast(err.message, 'error');
+        }
+    };
 
   const openModal = (mode, product = null) => {
     setModalValidationError('');

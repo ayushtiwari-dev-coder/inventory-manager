@@ -1,19 +1,22 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
+import { CacheProvider } from './context/CacheContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import WorkspacePage from './pages/WorkspacePage';
 import ProductsPage from './pages/ProductsPage';
+import SalesPage from './pages/SalesPage';
 import Layout from './components/Layout';
+// import AnalyticsPage from './pages/AnalyticsPage';
 
-// Security Gate 1: Enforce Active Sessions
+// Verifies global login token state
 function ProtectedRoute() {
   const hasGlobalToken = !!localStorage.getItem('global_token');
   return hasGlobalToken ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
-// Security Gate 2: Enforce Tenant Workspace Binding
+// Intercepts and renders the common Layout view with navigation elements
 function WorkspaceRequiredRoute() {
   const hasOrgToken = !!localStorage.getItem('org_token');
   return hasOrgToken ? <Layout /> : <Navigate to="/workspaces" replace />;
@@ -22,28 +25,29 @@ function WorkspaceRequiredRoute() {
 export default function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Authentication Gateways */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-
-          {/* Core Guarded Route Tree */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/workspaces" element={<WorkspacePage />} />
+      <CacheProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
             
-            {/* Scoped Tenant Domain Workspace */}
-            <Route element={<WorkspaceRequiredRoute />}>
-              <Route path="/products" element={<ProductsPage />} />
-              {/* Future paths like /sales and /analytics mount directly here */}
-              <Route path="*" element={<Navigate to="/products" replace />} />
+            {/* Global Session Protected Group */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/workspaces" element={<WorkspacePage />} />
+              
+              {/* Active Organization Tenant Namespace Scope */}
+              <Route element={<WorkspaceRequiredRoute />}>
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/sales" element={<SalesPage />} />
+                {/* <Route path="/analytics" element={<AnalyticsPage/>} /> */}
+                <Route path="*" element={<Navigate to="/products" replace />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Catch-all entry baseline fallback redirection */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </CacheProvider>
     </ToastProvider>
   );
 }
