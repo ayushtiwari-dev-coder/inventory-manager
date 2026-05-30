@@ -48,8 +48,8 @@ class analytics:
         FROM sale_items si
         JOIN sales s ON si.sale_id = s.sale_id
         JOIN products p ON si.product_id = p.product_id
-        WHERE s.org_id=%s AND s.is_active=1 AND p.is_active=1
-        GROUP BY p.product_id, p.product_name
+        WHERE s.org_id=%s
+        GROUP BY p.product_id,p.product_name
         ORDER BY total_quantity ASC
         LIMIT %s
         """

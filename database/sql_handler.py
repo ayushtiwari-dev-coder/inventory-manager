@@ -282,79 +282,117 @@ class Product:
 class Sale:
     @staticmethod
     def record_sale(org_id, user_id, username, items):
+        if not items:
+            return {"status": "error", "message": "Cart is empty"}
+
         db = None
         cursor = None
-
         try:
             db = get_connection()
+            # Using dictionary=True to cleanly map column headers to values
             cursor = db.cursor(dictionary=True)
-
+            
             total_sale = 0
             total_profit = 0
-            sale_items = []
+            sale_items_payload = []
+            stock_update_payload = []
             audit_item_details = []
 
+            # STEP 1: Extract all product IDs from the incoming cart
+            product_ids = [item["product_id"] for item in items]
+
+            # STEP 2: Dynamically create SQL placeholders matching the number of items
+            placeholders = ", ".join(["%s"] * len(product_ids))
+
+            # STEP 3: Single-hop batch fetch query with row-level locking (FOR UPDATE)
+            fetch_query = f"""
+                SELECT product_id, product_name, mrp, stock, profit_margin
+                FROM products
+                WHERE org_id = %s AND product_id IN ({placeholders}) AND is_active = 1
+                FOR UPDATE
+            """
+            # Combine org_id and product_ids into a single flat list for execution
+            cursor.execute(fetch_query, [org_id] + product_ids)
+            db_products = cursor.fetchall()
+
+            # STEP 4: Build your in-memory Hash Map (Dictionary)
+            # Allows instant O(1) lookups without any extra database round-trips
+            product_map = {p["product_id"]: p for p in db_products}
+
+            # STEP 5: Loop through the cart and process calculations entirely in local RAM
             for item in items:
                 product_id = item["product_id"]
                 quantity = item["quantity"]
 
                 if quantity <= 0:
-                    return {"status": "error","message":"sale quantity must be greater than zero"}
+                    return {"status": "error", "message": "Sale quantity must be greater than zero"}
 
-                fetch_query = """
-                SELECT product_id, product_name, mrp, stock, profit_margin
-                FROM products
-                WHERE org_id=%s AND product_id=%s AND is_active=1
-                FOR UPDATE
-                """
-                cursor.execute(fetch_query, (org_id, product_id))
-                product = cursor.fetchone()
+                # Fetch the product data from our local dictionary cache
+                product = product_map.get(product_id)
 
                 if not product:
-                    return {"status": "error","message":"Product does not exist"}
+                    return {"status": "error", "message": f"Product ID {product_id} does not exist in this workspace"}
 
+                # Real-time stock verification against our locked database values
                 if product["stock"] < quantity:
-                    return {"status": "error","message":f"insufficient stock.Only {product['stock']} units of {product['product_name']} left"}
+                    return {
+                        "status": "error", 
+                        "message": f"Insufficient stock. Only {product['stock']} units of {product['product_name']} left"
+                    }
 
+                # Mathematical aggregations
                 item_sale = product["mrp"] * quantity
                 item_profit = product["profit_margin"] * quantity
 
                 total_sale += item_sale
                 total_profit += item_profit
 
-                sale_items.append((product_id, quantity, item_profit, item_sale))
-                audit_item_details.append({"product_id": product_id, "product_name": product["product_name"], "quantity": quantity})
+                # Append data to our batch execution buffers
+                sale_items_payload.append((product_id, quantity, item_profit, item_sale))
+                stock_update_payload.append((quantity, org_id, product_id))
+                
+                audit_item_details.append({
+                    "product_id": product_id, 
+                    "product_name": product["product_name"], 
+                    "quantity": quantity
+                })
 
-                stock_query = """
+            # STEP 6: Execute Batch Stock Deductions (One single network packet)
+            stock_query = """
                 UPDATE products
                 SET stock = stock - %s
-                WHERE org_id=%s AND product_id=%s
-                """
-                cursor.execute(stock_query, (quantity, org_id, product_id))
+                WHERE org_id = %s AND product_id = %s
+            """
+            cursor.executemany(stock_query, stock_update_payload)
 
+            # STEP 7: Insert Parent Invoice Record
             insert_sale = """
-            INSERT INTO sales(org_id, user_id, total_profit, total_sale)
-            VALUES(%s, %s, %s, %s)
+                INSERT INTO sales (org_id, user_id, total_profit, total_sale)
+                VALUES (%s, %s, %s, %s)
             """
             cursor.execute(insert_sale, (org_id, user_id, total_profit, total_sale))
             sale_id = cursor.lastrowid
 
+            # STEP 8: Insert Individual Line Items
+            # Reusing the shared connection to write item details mapped to the sale_id
             insert_item = """
-            INSERT INTO sale_items
-            (sale_id, product_id, quantity, item_profit, item_sale)
-            VALUES (%s,%s,%s,%s,%s)
+                INSERT INTO sale_items (sale_id, product_id, quantity, item_profit, item_sale)
+                VALUES (%s, %s, %s, %s, %s)
             """
-            for product_id, qty, profit, sale in sale_items:
-                cursor.execute(insert_item, (sale_id, product_id, qty, profit, sale))
+            # Map the auto-generated sale_id into each item row payload
+            final_sale_items = [(sale_id, p_id, qty, profit, sale) for p_id, qty, profit, sale in sale_items_payload]
+            cursor.executemany(insert_item, final_sale_items)
 
+            # STEP 9: Write Security Audit Trail Log
             DatabaseHelper.log_action(cursor, org_id, user_id, username, "RECORD_SALE", {
                 "sale_id": sale_id,
                 "items": audit_item_details,
                 "total_sale": float(total_sale)
             })
 
+            # Commit all operations permanently to the database together
             db.commit()
-
+            
             return {
                 "status": "success",
                 "total_sale": total_sale,
@@ -363,13 +401,11 @@ class Sale:
 
         except Exception:
             if db:
-                db.rollback()
+                db.rollback()  # Instantly restores stock levels if any error occurred
             raise
         finally:
-            if cursor:
-                cursor.close()
-            if db:
-                db.close()
+            if cursor: cursor.close()
+            if db: db.close()  # Safely recycles the connection back into the pool
 
     @staticmethod
     def get_recent_sales(org_id, limit=10):

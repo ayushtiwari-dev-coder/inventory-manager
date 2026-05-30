@@ -1,4 +1,5 @@
 import secrets
+from security.auth_deps import create_passport
 from database.connection import get_connection
 from database.sql_handler import DatabaseHelper
 
@@ -37,8 +38,15 @@ class OrgManager:
             })
             
             db.commit()
+            org_token=create_passport(
+                user_id=owner_id,
+                username="SYSTEM",
+                org_id=org_id,
+                role="owner"
+            )
             return {
-                "status": "success", 
+                "status": "success",
+                "org_token":org_token, 
                 "org_id": org_id, 
                 "manager_join_code": manager_code, 
                 "employee_join_code": employee_code
@@ -184,6 +192,42 @@ class OrgManager:
             return {"status": "success"}
         except Exception as e:
             db.rollback()
+            return {"status": "error", "message": str(e)}
+        finally:
+            cursor.close()
+            db.close()
+
+    @staticmethod
+    def get_org_profile(org_id, user_role):
+        """
+        Fetches organization metadata. 
+        Dynamically masks sensitive join codes as NULL if the requesting user is an employee.
+        """
+        db = get_connection()
+        cursor = db.cursor(dictionary=True)
+        try:
+            # If the user is an owner or manager, they see the actual codes. 
+            # If they are an employee, the database evaluates the condition and returns NULL.
+            query = """
+                SELECT 
+                    org_id, 
+                    org_name, 
+                    owner_id, 
+                    created_at,
+                    CASE 
+                        WHEN %s IN ('owner', 'manager') THEN manager_join_code 
+                        ELSE NULL 
+                    END AS manager_join_code,
+                    CASE 
+                        WHEN %s IN ('owner', 'manager') THEN employee_join_code 
+                        ELSE NULL 
+                    END AS employee_join_code
+                FROM organizations 
+                WHERE org_id = %s AND is_active = 1
+            """
+            cursor.execute(query, (user_role, user_role, org_id))
+            return cursor.fetchone()
+        except Exception as e:
             return {"status": "error", "message": str(e)}
         finally:
             cursor.close()

@@ -1,70 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { salesApi } from '../services/salesApi';
-import { analyticsApi } from '../services/analyticsApi';
-import { useApi } from '../hooks/useApi';
-import { useSalesCache } from '../context/CacheContext';
+// LOCATION: frontend_react\src\pages\SalesPage.jsx
+
+import React, { useState } from 'react';
+import { useRecentSales, useRevenueSummary } from '../queries/salesQueries';
 
 export default function SalesPage() {
-  // Switcher bar timeframe context state: daily, weekly, monthly, 3monthly
+  // Timeframe switch status state: daily, weekly, monthly, 3monthly
   const [timeframe, setTimeframe] = useState('daily');
-  
-  const { salesCache, salesFlags, updateSalesCacheValue, removeDirtyFlag, setSalesFlags } = useSalesCache();
 
-  // Connects cleanly to both endpoints across your split frontend services
-  const { loading: salesLoading, execute: fetchRecentSales } = useApi(salesApi.getRecentSales);
-  const { loading: summaryLoading, execute: fetchSummary } = useApi(analyticsApi.getRevenueSummary);
-
-  const recentSales = salesCache.recentSales || [];
-  
-  // Safe extraction fallbacks for metrics summaries
-  const currentSummary = salesCache.summaries[timeframe] || {
-    total_transactions: 0,
-    total_revenue: 0,
-    total_profit: 0
-  };
-
-  const synchronizeSalesDashboard = useCallback(async () => {
-    // 1. Fetch recent sales using the salesApi service endpoint
-    if (salesFlags.recentSalesDirty || !salesCache.recentSales) {
-      try {
-        const res = await fetchRecentSales();
-        updateSalesCacheValue('recentSales', res?.sales || []);
-        setSalesFlags(prev => ({ ...prev, recentSalesDirty: false }));
-      } catch (err) {
-        console.error("Recent sales endpoint sync failed:", err);
-      }
-    }
-
-    // 2. Fetch aggregate totals using the analyticsApi service endpoint
-    if (salesFlags.dirtySummaries.has(timeframe) || !salesCache.summaries[timeframe]) {
-      try {
-        const res = await fetchSummary(timeframe);
-        updateSalesCacheValue('summaries', res?.data || { 
-          total_transactions: 0, 
-          total_revenue: 0, 
-          total_profit: 0 
-        }, timeframe);
-        removeDirtyFlag('dirtySummaries', timeframe);
-      } catch (err) {
-        console.error(`Summary metrics sync failed for window: ${timeframe}`, err);
-      }
-    }
-  }, [timeframe, salesFlags, salesCache, fetchRecentSales, fetchSummary, updateSalesCacheValue, removeDirtyFlag, setSalesFlags]);
-
-  useEffect(() => {
-    synchronizeSalesDashboard();
-  }, [timeframe, synchronizeSalesDashboard]);
+  // --- TANSTACK QUERY HOOK INTEGRATIONS ---
+  const { data: recentSales = [], isLoading: salesLoading } = useRecentSales();
+const { data: currentSummary = { total_transactions: 0, total_revenue: 0, total_profit: 0 }, isLoading: summaryLoading } = useRevenueSummary(timeframe);
 
   return (
     <div className="w-full max-w-6xl mx-auto p-4 lg:p-6 space-y-6 text-gray-100">
-      
+
       {/* TIMEFRAME SWITCHER BAR */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#1C2541]/40 border border-[#3A506B]/20 p-4 rounded-xl shadow-lg">
         <div>
           <h3 className="text-base font-bold text-white tracking-wide">Reporting Stream Scope</h3>
           <p className="text-xs text-gray-400">Toggle timeframe scopes dynamically to adjust database aggregates.</p>
         </div>
-        
+
         <div className="flex bg-[#0B132B] p-1 rounded-lg border border-[#3A506B]/40">
           {[
             { label: 'Daily', value: 'daily' },
@@ -89,7 +45,6 @@ export default function SalesPage() {
 
       {/* METRIC CARD BOXES */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        
         {/* Total Revenue Box */}
         <div className="bg-[#1C2541] border border-[#3A506B]/30 p-6 rounded-xl shadow-xl flex flex-col justify-between min-h-140px">
           <div>
@@ -115,7 +70,6 @@ export default function SalesPage() {
             Net:net operation yields across the chosen timeline processing index.
           </div>
         </div>
-        
       </div>
 
       {/* HISTORICAL ACTIVITY STREAM TABLE */}
@@ -123,6 +77,7 @@ export default function SalesPage() {
         <div className="p-4 border-b border-[#3A506B]/30 bg-[#0B132B]/20">
           <h3 className="text-base font-bold text-white tracking-wide">Recent Checkout History</h3>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
@@ -174,7 +129,6 @@ export default function SalesPage() {
           </table>
         </div>
       </div>
-
     </div>
   );
 }

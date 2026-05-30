@@ -1,5 +1,6 @@
 import os
 import time
+from security.auth_deps import create_passport
 from security.hashing import hashing_password, check_password
 from database.sql_handler import User
 from database.org_manager import OrgManager
@@ -9,10 +10,7 @@ load_dotenv()
 
 # 1. JOIN MY APP (The Front Door Gatekeeper)
 def verify_app_access(submitted_code):
-    """
-    Called by the frontend before showing the Login/Register screens.
-    If this fails, the user cannot even attempt to hit the database.
-    """
+    "called by frontend when u try to make account u have to give the code to access"
     master_code = os.getenv("MASTER_ENTRY_CODE")
     if not master_code or submitted_code != master_code:
         return {"status": "error", "message": "Unauthorized: Invalid App Entry Code"}
@@ -20,8 +18,7 @@ def verify_app_access(submitted_code):
 
 # 2. CREATE ACCOUNT
 def create_account(username, password, name, master_code):
-    """Creates the global user identity. Still requires the master code as a secondary safety check."""
-    verify_check = verify_app_access(master_code)
+    verify_check = verify_app_access(master_code) #checks the master code before allowing any further checks
     if verify_check["status"] == "error":
         return verify_check
 
@@ -63,12 +60,16 @@ def create_account(username, password, name, master_code):
     result = User.create_user(username, password_hash, name, None)
     if result.get("status") == "success":
         user = User.get_user(username)
+        global_token=create_passport(user_id=user["user_id"],username=user["username"])
+
         return {
             "status": "success",
+            "global_token":global_token,
             "data": {
                 "user_id": user["user_id"],
                 "username": user["username"],
-                "name": user["name"]
+                "name": user["name"],
+                "workspaces":[]
             }
         }
     return result

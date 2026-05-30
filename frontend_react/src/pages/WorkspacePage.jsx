@@ -27,8 +27,8 @@ export default function WorkspacePage() {
       const createRes = await runCreate(orgName, ownerGmail);
       showToast(`Organization "${orgName}" initialized! Minting credentials...`, 'success');
       
-      const selectRes = await runSelect(createRes.org_id);
-      localStorage.setItem('org_token', selectRes.org_token);
+      // const selectRes = await runSelect(createRes.org_id);
+      localStorage.setItem('org_token', createRes.org_token);
       navigate('/products');
     } catch (err) {
       showToast(err.message, 'error');
@@ -36,19 +36,26 @@ export default function WorkspacePage() {
   };
 
   const handleJoinSubmit = async (e) => {
-    e.preventDefault();
-    if (joinCode.trim().length !== 6) return showToast("Join code must be exactly 6 characters.", 'error');
+  e.preventDefault();
+  if (joinCode.trim().length !== 6) return showToast("Join code must be exactly 6 characters.", 'error');
 
-    try {
-      const response = await runJoin(joinCode.toUpperCase());
+  try {
+    const response = await runJoin(joinCode.toUpperCase());
+    
+    // Fallback checking to handle BOTH snake_case and camelCase payloads safely
+    const token = response?.orgToken || response?.org_token || response?.data?.org_token;
+    
+    if (token) {
+      localStorage.setItem('org_token', token);
       showToast('Connected to organization tenant namespace!', 'success');
-      
-      if (response.org_token) localStorage.setItem('org_token', response.org_token);
       navigate('/products');
-    } catch (err) {
-      showToast(err.message, 'error');
+    } else {
+      showToast('Failed to acquire a secure workspace access token.', 'error');
     }
-  };
+  } catch (err) {
+    showToast(err.message || 'An error occurred while joining.', 'error');
+  }
+};
 
   if (mode === 'choice') {
     return (

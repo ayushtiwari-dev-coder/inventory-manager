@@ -198,14 +198,52 @@ def create_workspace(data: CreateOrgRequest, user: dict = Depends(get_current_us
         raise HTTPException(status_code=400, detail=result["message"])
     return result
 
+# Update under #2. WORKSPACE SELECTION (Global Token Required) inside main.py
+
 @app.post("/org/join")
 def join_workspace(data: JoinOrgRequest, user: dict = Depends(get_current_user)):
+    # 1. Bind the user to the organization rows in the database
     result = OrgManager.join_organization(user["user_id"], data.join_code)
     if result["status"] == "error":
         raise HTTPException(status_code=400, detail=result["message"])
-    return result
+    
+    # 2. FIX: Mint a secure org-scoped token immediately on success so the frontend can route properly
+    org_token = create_passport(
+        user_id=user["user_id"],
+        username=user["username"],
+        org_id=result["org_id"],
+        role=result["role"]
+    )
+    
+    # Return the structure your frontend expects to pull out of response payloads
+    return {
+        "status": "success",
+        "org_token": org_token,
+        "role": result["role"],
+        "org_id": result["org_id"]
+    }# Update under #2. WORKSPACE SELECTION (Global Token Required) inside main.py
 
 
+
+@app.get("/org/profile")
+def view_organization_profile(user: dict = Depends(get_org_access)):
+    """
+    Unified profile endpoint mapping workspace configurations cleanly.
+    Locks access limits dynamically within the database execution block.
+    """
+    # OrgManager handles the lookup conditional structures internally using the verified payload parameters
+    result = OrgManager.get_org_profile(user["org_id"], user["role"])
+    
+    if not result:
+        raise HTTPException(status_code=404, detail="Workspace profile not found or inactive.")
+        
+    if isinstance(result, dict) and result.get("status") == "error":
+        raise HTTPException(status_code=500, detail=result.get("message", "Internal database lookup failure."))
+        
+    return {
+        "status": "success",
+        "data": result
+    }
 
 # 3. INVENTORY ROUTES (Org-Scoped Token Required)
 
@@ -245,6 +283,10 @@ def remove_product(product_id: int, user: dict = Depends(RequireRole(["owner", "
         raise HTTPException(status_code=400, detail=result.get("message"))
     return result
 
+# Insert this under: #2. WORKSPACE SELECTION (Global Token Required) in main.py
+
+
+
 
 
 # 4. SALES ROUTES (Org-Scoped Token Required)
@@ -280,7 +322,7 @@ def get_top_profitable(user: dict = Depends(RequireRole(["owner", "manager"]))):
     return analytics.top_products_by_profit(user["org_id"])
 
 @app.get("/analytics/least-sold")
-def get_least_sold(user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
+def get_least_sold(user: dict = Depends(RequireRole(["owner", "manager"]))):
     
     return analytics.least_sold_products(user["org_id"])
 

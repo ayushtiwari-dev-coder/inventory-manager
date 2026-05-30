@@ -24,12 +24,12 @@ export default function RegisterPage() {
     if (!masterCode) return showToast("Master code required.", 'error');
 
     try {
-      await runRegister(name, username, password, masterCode);
+      const response =await runRegister(name, username, password, masterCode);
       showToast('Account verified! Performing secure auto-login...', 'success');
       
-      const loginRes = await runLogin(username, password);
-      localStorage.setItem('global_token', loginRes.global_token);
-      localStorage.setItem('user_info', JSON.stringify(loginRes.data));
+      // const loginRes = await runLogin(username, password);
+      localStorage.setItem('global_token', response.global_token);
+      localStorage.setItem('user_info', JSON.stringify(response.data));
       
       navigate('/workspaces');
     } catch (err) {
