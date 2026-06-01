@@ -338,6 +338,6 @@ def low_stock(user: dict = Depends(RequireRole(["owner", "manager", "employee"])
 
 
 if os.path.exists("frontend/dist"):
-    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
+    app.mount("/", StaticFiles(directory="frontend_react/dist", html=True), name="frontend")
 else:
-    print("WARNING: 'frontend/dist' layout layer not found locally. Running backend-only engine mode.")
+    print("WARNING: 'frontend_react/dist' layout layer not found locally. Running backend-only engine mode.")
