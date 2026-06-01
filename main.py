@@ -336,4 +336,8 @@ def low_stock(user: dict = Depends(RequireRole(["owner", "manager", "employee"])
     return product_manager.get_low_stock_products(user["org_id"])
 
 
-# app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
+if os.path.exists("frontend/dist"):
+    app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="frontend")
+else:
+    print("WARNING: 'frontend/dist' layout layer not found locally. Running backend-only engine mode.")
