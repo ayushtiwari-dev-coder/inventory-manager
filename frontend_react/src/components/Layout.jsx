@@ -6,8 +6,8 @@ export default function Layout() {
   const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
 
   const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login');
+    localStorage.removeItem('org_token');
+    navigate('/workspaces');
   };
 
   return (

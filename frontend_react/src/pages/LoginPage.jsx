@@ -22,20 +22,17 @@ export default function LoginPage() {
     const pErr = validatePassword(password);
     if (pErr) return showToast(pErr, 'error');
 
+    // LOCATION: frontend_react\src\pages\LoginPage.jsx
+
     try {
       const response = await runLogin(username, password);
       showToast('Access Granted! Welcome back.', 'success');
+
       localStorage.setItem('global_token', response.global_token);
       localStorage.setItem('user_info', JSON.stringify(response.data));
 
-      if (response.data.workspaces && response.data.workspaces.length > 0) {
-        const primaryOrg = response.data.workspaces[0];
-        const selection = await autoSelectWorkspace(primaryOrg.org_id);
-        localStorage.setItem('org_token', selection.org_token);
-        navigate('/products');
-      } else {
-        navigate('/workspaces');
-      }
+
+      navigate('/workspaces');
     } catch (err) {
       showToast(err.message, 'error');
     }

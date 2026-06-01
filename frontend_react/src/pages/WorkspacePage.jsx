@@ -1,22 +1,45 @@
+// LOCATION: frontend_react\src\pages\WorkspacePage.jsx
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { workspaceApi } from '../services/workspaceApi';
 import { useApi } from '../hooks/useApi';
 import { useToast } from '../context/ToastContext';
+import { useSelectWorkspace } from '../queries/workspaceQueries';
 import { validateOrgName, validateEmail } from '../utils/validators';
+import WorkspacePicker from '../components/WorkspacePicker';
 
 export default function WorkspacePage() {
-  const [mode, setMode] = useState('choice');
+  // Navigation views: 'picker', 'create', 'join'
+  const [mode, setMode] = useState('picker');
   const [orgName, setOrgName] = useState('');
   const [ownerGmail, setOwnerGmail] = useState('');
   const [joinCode, setJoinCode] = useState('');
-  
-  const { execute: runCreate, loading: createLoading } = useApi(workspaceApi.createOrg);
-  const { execute: runJoin, loading: joinLoading } = useApi(workspaceApi.joinOrg);
-  const { execute: runSelect } = useApi(workspaceApi.selectWorkspace);
-  
+
   const showToast = useToast();
   const navigate = useNavigate();
+
+  // Extract user metrics cache profiles securely from local memory
+  const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+  const workspaces = userInfo.workspaces || [];
+
+  // React Query mutation execution engine
+  const { mutateAsync: selectOrg, isPending: switchingContext } = useSelectWorkspace();
+
+  // Keep stable useApi hooks for your post forms
+  const { execute: runCreate, loading: createLoading } = useApi(workspaceApi.createOrg);
+  const { execute: runJoin, loading: joinLoading } = useApi(workspaceApi.joinOrg);
+
+  // --- ACTIONS ---
+  const handleSelectWorkspace = async (orgId) => {
+    try {
+      await selectOrg(orgId);
+      showToast('Connected to organization tenant namespace!', 'success');
+      navigate('/products');
+    } catch (err) {
+      showToast(err.message || 'Failed to establish workspace tunnel.', 'error');
+    }
+  };
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
@@ -24,11 +47,20 @@ export default function WorkspacePage() {
     const emailErr = validateEmail(ownerGmail); if (emailErr) return showToast(emailErr, 'error');
 
     try {
+      // 1. INSIDE handleCreateSubmit, update the success block:
       const createRes = await runCreate(orgName, ownerGmail);
-      showToast(`Organization "${orgName}" initialized! Minting credentials...`, 'success');
-      
-      // const selectRes = await runSelect(createRes.org_id);
+      showToast(`Organization "${orgName}" initialized successfully!`, 'success');
       localStorage.setItem('org_token', createRes.org_token);
+
+      // FIX: Update your cached user context data so it lists the new org immediately!
+      const currentUserInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+      if (!currentUserInfo.workspaces) currentUserInfo.workspaces = [];
+      currentUserInfo.workspaces.push({
+        org_id: createRes.org_id,
+        org_name: orgName,
+        role: 'owner' // Creator is automatically marked owner
+      });
+      localStorage.setItem('user_info', JSON.stringify(currentUserInfo));
       navigate('/products');
     } catch (err) {
       showToast(err.message, 'error');
@@ -36,50 +68,72 @@ export default function WorkspacePage() {
   };
 
   const handleJoinSubmit = async (e) => {
-  e.preventDefault();
-  if (joinCode.trim().length !== 6) return showToast("Join code must be exactly 6 characters.", 'error');
+    e.preventDefault();
+    if (joinCode.trim().length !== 6) return showToast("Join code must be exactly 6 characters.", 'error');
 
-  try {
-    const response = await runJoin(joinCode.toUpperCase());
-    
-    // Fallback checking to handle BOTH snake_case and camelCase payloads safely
-    const token = response?.orgToken || response?.org_token || response?.data?.org_token;
-    
-    if (token) {
-      localStorage.setItem('org_token', token);
-      showToast('Connected to organization tenant namespace!', 'success');
-      navigate('/products');
-    } else {
-      showToast('Failed to acquire a secure workspace access token.', 'error');
+    try {
+      const response = await runJoin(joinCode.toUpperCase());
+      const token = response?.orgToken || response?.org_token || response?.data?.org_token;
+      
+      if (token) {
+        localStorage.setItem('org_token', token);
+
+        // --- CACHE SYNCHRONIZATION LOOP ---
+        // Dynamically append the newly joined workspace parameters into the profile list
+        const currentUserInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+        if (!currentUserInfo.workspaces) currentUserInfo.workspaces = [];
+
+        currentUserInfo.workspaces.push({
+          org_id: response.org_id,
+          org_name: response.org_name || `Workspace #${response.org_id}`, // Safe fallback mapping
+          role: response.role // Correctly captures whether they joined as a manager or employee
+        });
+        localStorage.setItem('user_info', JSON.stringify(currentUserInfo));
+
+        showToast('Connected to organization tenant namespace!', 'success');
+        navigate('/products');
+      } else {
+        showToast('Failed to acquire a secure workspace access token.', 'error');
+      }
+    } catch (err) {
+      showToast(err.message || 'An error occurred while joining.', 'error');
     }
-  } catch (err) {
-    showToast(err.message || 'An error occurred while joining.', 'error');
-  }
-};
+  };
 
-  if (mode === 'choice') {
-    return (
-      <div className="min-h-screen bg-[#0B132B] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#1C2541] border border-[#3A506B]/30 rounded-2xl p-8 shadow-2xl text-center">
-          <h2 className="text-2xl font-bold text-white mb-2 tracking-wide">Setup Your Workspace</h2>
-          <p className="text-gray-400 text-sm mb-8">Choose to join an existing organization or launch a brand new database hub.</p>
-          <div className="space-y-4">
-            <button onClick={() => setMode('create')} className="w-full bg-[#00B4D8] hover:bg-[#0077B6] py-4 rounded-xl font-semibold text-white transition-all shadow-lg cursor-pointer">Create New Organization</button>
-            <div className="text-gray-500 font-bold text-xs uppercase tracking-widest my-2">OR</div>
-            <button onClick={() => setMode('join')} className="w-full bg-transparent border border-[#3A506B] text-gray-200 hover:bg-[#3A506B]/30 py-4 rounded-xl font-semibold transition-all cursor-pointer">Join with Invite Code</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const handleGlobalLogout = () => {
+    localStorage.clear();
+    showToast('Logged out from global session.', 'info');
+    navigate('/login');
+  };
+
+  const handleBackToPicker = () => {
+    setOrgName('');
+    setJoinCode('');
+    setMode('picker'); // Simple callback router links back to your component
+  };
 
   return (
     <div className="min-h-screen bg-[#0B132B] flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-[#1C2541] border border-[#3A506B]/30 rounded-2xl p-8 shadow-2xl">
-        <button onClick={() => { setMode('choice'); setOrgName(''); setJoinCode(''); }} className="text-sm text-[#48CAE4] hover:underline mb-4 inline-block cursor-pointer">← Back to options</button>
-        
-        {mode === 'create' ? (
+
+        {/* VIEW 1: RENDER PICKER COMPONENT */}
+        {mode === 'picker' && (
+          <WorkspacePicker
+            userInfo={userInfo}
+            workspaces={workspaces}
+            switchingContext={switchingContext}
+            onSelectWorkspace={handleSelectWorkspace}
+            onActionClick={(targetMode) => setMode(targetMode)}
+            onGlobalLogout={handleGlobalLogout}
+          />
+        )}
+
+        {/* VIEW 2: LAUNCH FORM REGISTRATION */}
+        {mode === 'create' && (
           <div>
+            <button onClick={handleBackToPicker} className="text-sm text-[#48CAE4] hover:underline mb-4 inline-block cursor-pointer">
+              &larr; Back to profile selector
+            </button>
             <h2 className="text-xl font-bold text-white mb-1">Create Organization</h2>
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div>
@@ -95,8 +149,14 @@ export default function WorkspacePage() {
               </button>
             </form>
           </div>
-        ) : (
+        )}
+
+        {/* VIEW 3: JOIN FORM DESK */}
+        {mode === 'join' && (
           <div>
+            <button onClick={handleBackToPicker} className="text-sm text-[#48CAE4] hover:underline mb-4 inline-block cursor-pointer">
+              &larr; Back to profile selector
+            </button>
             <h2 className="text-xl font-bold text-white mb-1">Join Workspace</h2>
             <form onSubmit={handleJoinSubmit} className="space-y-4">
               <div>
@@ -109,6 +169,7 @@ export default function WorkspacePage() {
             </form>
           </div>
         )}
+
       </div>
     </div>
   );

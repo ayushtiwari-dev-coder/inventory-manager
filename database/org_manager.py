@@ -64,7 +64,7 @@ class OrgManager:
         cursor = db.cursor(dictionary=True)
         try:
             # Step 1: Look up code to see if it belongs to a manager
-            query_m = "SELECT org_id FROM organizations WHERE manager_join_code = %s AND is_active = 1"
+            query_m = "SELECT org_id,org_name FROM organizations WHERE manager_join_code = %s AND is_active = 1"
             cursor.execute(query_m, (join_code,))
             res_m = cursor.fetchone()
             
@@ -73,7 +73,7 @@ class OrgManager:
                 org_id = res_m['org_id']
             else:
                 # Step 2: Check if it belongs to an employee
-                query_e = "SELECT org_id FROM organizations WHERE employee_join_code = %s AND is_active = 1"
+                query_e = "SELECT org_id,org_name FROM organizations WHERE employee_join_code = %s AND is_active = 1"
                 cursor.execute(query_e, (join_code,))
                 res_e = cursor.fetchone()
                 if res_e:
@@ -103,7 +103,7 @@ class OrgManager:
             })
 
             db.commit()
-            return {"status": "success", "org_id": org_id, "role": role}
+            return {"status": "success", "org_id": org_id, "role": role,"org_name":res_m['org_name'] if res_m else res_e['org_name']}
         except Exception as e:
             db.rollback()
             return {"status": "error", "message": str(e)}
