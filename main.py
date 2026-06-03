@@ -86,6 +86,7 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     name: str
+    reg_code: str
 
 class ProductCreate(BaseModel):
     product_name: str
@@ -131,7 +132,7 @@ def user_login(data: LoginRequest):
 
 @app.post("/register")
 def register(data: RegisterRequest):
-    result = create_account(data.username, data.password, data.name)
+    result = create_account(data.username, data.password, data.name,data.reg_code)
 
     if result.get("status") != "success":
         raise HTTPException(status_code=400, detail=result.get("message", "Registration failed"))

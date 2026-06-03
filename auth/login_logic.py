@@ -1,6 +1,9 @@
 import time
 from security.hashing import hashing_password,check_password
 from database.sql_handler import User
+from dotenv import load_dotenv
+import os
+
 
 def login(username, password):
     user = User.get_user(username)
@@ -54,7 +57,15 @@ def login(username, password):
         }
     }
 
-def create_account(username, password, name):
+def create_account(username, password, name,reg_code):
+    load_dotenv()
+    MASTER_CODE=os.getenv("MASTER_REG_CODE")
+    if not MASTER_CODE or reg_code != MASTER_CODE:
+        return{
+            "status":"error",
+            "message":"Registration failed:invalid or empty MASTER CODE"
+        }
+
 
     username = username.strip().lower()
 

@@ -1,6 +1,6 @@
 // helping.js
 
-const BASE_URL = "https://inventory-manager-fs9t.onrender.com";
+const BASE_URL = "http://localhost:8000";
 
 
 // TOKEN HELPER

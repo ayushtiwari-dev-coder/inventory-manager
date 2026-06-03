@@ -25,6 +25,7 @@
             <a href="#" id="link-to-register" class="toggle-link">Don't have an account? Register</a>
         </div>
 
+        <!-- Inside frontend/index.html under the registration section -->
         <div id="register-section" class="auth-card" style="display: none;">
             <h2>Create Account</h2>
             <div class="input-group">
@@ -39,12 +40,18 @@
                 <label for="reg-password">Password</label>
                 <input type="password" id="reg-password" placeholder="Min 8 characters">
             </div>
+
+            <div class="input-group">
+                <label for="reg-code">Master Entry Code</label>
+                <input type="password" id="reg-code" placeholder="Enter 16-character master key">
+            </div>
+
             <button id="btn-register-submit" class="auth-btn">Register</button>
-            <a href="#" id="link-to-login" class="toggle-link" >Already have an account? Login</a>
+            <a href="#" id="link-to-login" class="toggle-link">Already have an account? Login</a>
         </div>
     </div>
     <script type="module" src="login.js?v=2.1">
-        
+
     </script>
     <div id="toast-container" class="toast-container"></div>
 

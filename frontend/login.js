@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-const BASE_URL = "https://inventory-manager-fs9t.onrender.com";
+const BASE_URL = "http://localhost:8000";
 
 async function handle_register(e) {
     e.preventDefault();
@@ -33,6 +33,7 @@ async function handle_register(e) {
     const name = document.getElementById("reg-fullname").value;
     const username = document.getElementById("reg-username").value;
     const password = document.getElementById("reg-password").value;
+    const reg_Code=document.getElementById("reg-code").value;
 
     try {
         validateInputs({
@@ -46,16 +47,16 @@ async function handle_register(e) {
         const result = await apiRequest("/register", "POST", {
             name: name,
             username: username,
-            password: password
+            password: password,
+            reg_code:reg_Code
         }, false);
 
         localStorage.setItem("token", result.token);
         clearInputs("register-section");
         
-        // Replaced blocking alert with success toast
+        
         showToast("Account Created Successfully!", "success");
         
-        // Small delay so they can actually see the success toast before redirecting
         setTimeout(() => {
             window.location.href = "dashboard.html";
         }, 1000);
