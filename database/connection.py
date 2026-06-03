@@ -13,7 +13,8 @@ connection_pool = pooling.MySQLConnectionPool(
     password=os.getenv("DB_PASSWORD"),
     database=os.getenv("DB_NAME"),
     ssl_ca="ca.pem",
-    ssl_verify_cert=True
+    ssl_disabled=False,
+    ssl_verify_cert=False
 )
 
 def get_connection():

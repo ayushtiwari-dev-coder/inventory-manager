@@ -67,7 +67,7 @@ async def universal_generic_exception_handler(request, exc: Exception):
         status_code=500,
         content={"status": "error", "message": "An unexpected system exception occurred inside the core server pipeline."}
     )
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+
 
 # REQUEST MODELS (Pydantic Schemas)
 
@@ -335,3 +335,4 @@ def get_sales_trend(months: int=4,user: dict = Depends(RequireRole(["owner", "ma
 def low_stock(user: dict = Depends(RequireRole(["owner", "manager", "employee"]))):
     return product_manager.get_low_stock_products(user["org_id"])
 
+app.mount("/", StaticFiles(directory="frontend_react/dist", html=True), name="frontend")

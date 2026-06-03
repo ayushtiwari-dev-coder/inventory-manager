@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = window.location.origin;
 
 async function apiClient(endpoint, { method = 'GET', data = null, requireAuth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' };
