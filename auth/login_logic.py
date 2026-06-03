@@ -48,6 +48,20 @@ def login(username, password):
 
     # 3. Successful login - Reset attempts back to 0
     User.update_failed_attempts(username, 0)
+
+    if user.get("is_allowed") != 1:
+        return {
+            "status": "error",
+            "message": "Account suspended. Access is blocked by the administrator."
+        }
+
+    if user.get("must_change_password") == 1:
+        return {
+            "status": "force_password_reset",
+            "message": "First login detected. You must change your temporary password.",
+            "username": user["username"]
+        }
+
     return {
         "status": "success",
         "data": {
@@ -98,41 +112,12 @@ def create_account(username, password, name,reg_code):
             "status": "error",
             "message": "Username already exists"
         }
-
-    if len(password) < 8:
-        return {
-            "status": "error",
-            "message": "Password too short"
-        }
-
-    if len(password) > 32:
-        return {
-            "status": "error",
-            "message": "Password too long"
-        }
-
-    if not any(c.isupper() for c in password):
-        return {
-            "status": "error",
-            "message": "Password must contain uppercase letter"
-        }
-
-    if not any(c.isdigit() for c in password):
-        return {
-            "status": "error",
-            "message": "Password must contain number"
-        }
-
-    if not any(not c.isalnum() for c in password):
-        return {
-            "status": "error",
-            "message": "Password must contain special character"
-        }
-
-    if " " in password:
-        return {
-            "status": "error",
-            "message": "Password cannot contain spaces"
+    
+    response=validate_password_strength(password)
+    if response["status"]=="error":
+        return{
+            "status":"error",
+            "message":response["message"]
         }
 
     if name == "":
@@ -168,3 +153,34 @@ def create_account(username, password, name,reg_code):
             "name": user["name"]
         }
     }
+
+def finalizePassword(username: str, new_password: str):
+    validation = validate_password_strength(new_password)
+    if validation["status"] == "error":
+        return validation
+
+    secure_hash = hashing_password(new_password)
+
+    db_result = User.finalize_user_password(username, secure_hash)
+    if db_result.get("status") == "error":
+        return {"status": "error", "message": "Database failed to update credentials."}
+
+    return {
+        "status": "success",
+        "message": "Password permanently updated. Please log in with your new credentials."
+    }
+
+def validate_password_strength(password: str):
+    if len(password) < 8:
+        return {"status": "error", "message": "Password too short"}
+    if len(password) > 32:
+        return {"status": "error", "message": "Password too long"}
+    if not any(c.isupper() for c in password):
+        return {"status": "error", "message": "Password must contain uppercase letter"}
+    if not any(c.isdigit() for c in password):
+        return {"status": "error", "message": "Password must contain number"}
+    if not any(not c.isalnum() for c in password):
+        return {"status": "error", "message": "Password must contain special character"}
+    if " " in password:
+        return {"status": "error", "message": "Password cannot contain spaces"}
+    return {"status": "success"}

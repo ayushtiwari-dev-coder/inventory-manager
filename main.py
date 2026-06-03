@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 # --- LOGIC IMPORTS ---
 from database.sql_handler import Database,User
-from auth.login_logic import create_account, login
+from auth.login_logic import create_account, login,finalizePassword
 from inventory.product_manager import (
     get_products, add_product, delete_product,update_product_full
 )
@@ -88,6 +88,10 @@ class RegisterRequest(BaseModel):
     name: str
     reg_code: str
 
+class PasswordUpdatePayload(BaseModel):
+    username: str
+    new_password: str
+
 class ProductCreate(BaseModel):
     product_name: str
     selling_price: float
@@ -114,20 +118,50 @@ class SaleCreate(BaseModel):
 def user_login(data: LoginRequest):
     result = login(data.username, data.password)
     
-
-    if result.get("status") != "success":
+    if result.get("status") == "error":
         raise HTTPException(status_code=401, detail=result)
+        
+    if result.get("status") == "force_password_reset":
+        return {
+            "status": "force_password_reset",
+            "message": result.get("message"),
+            "username": result.get("username")
+        }
 
     user_data = result["data"]
     user_id = user_data["user_id"]
-
     token = create_passport(user_id)
-
+    
     return {
         "status": "success",
         "token": token,
         "name": user_data["name"],
         "username": user_data["username"]
+    }
+
+@app.post("/auth/finalize-reset")
+def finalize_reset(data: PasswordUpdatePayload):
+    from auth.login_logic import finalizePassword
+    
+    result = finalizePassword(data.username, data.new_password)
+    
+    if result.get("status") != "success":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.get("message", "Password modification failed.")
+        )
+        
+    user_record = User.get_user(data.username)
+    user_id = user_record["user_id"]
+    
+    token = create_passport(user_id)
+    
+    return {
+        "status": "success",
+        "token": token,
+        "name": user_record["name"],
+        "username": user_record["username"],
+        "message": "Password updated successfully!"
     }
 
 @app.post("/register")
@@ -148,6 +182,7 @@ def register(data: RegisterRequest):
         "name": user_data["name"],
         "username": user_data["username"]
     }
+
 
 
 # --- PROTECTED PRODUCT ROUTES ---

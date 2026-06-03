@@ -33,8 +33,8 @@ class User:
     @staticmethod
     def create_user(username, password_hash):
         query = """
-        INSERT INTO users (username, password_hash)
-        VALUES (%s, %s)
+        INSERT INTO users (username, password_hash,is_allowed,must_change_password)
+        VALUES (%s, %s,1,1)
         """
         return DatabaseHelper.execute_query(query, (username, password_hash))
     
@@ -50,11 +50,21 @@ class User:
     @staticmethod
     def get_user(username):
         query = """
-        SELECT user_id, username, password_hash, name, lock_until,failed_attempts
-        FROM users
+        SELECT user_id, username, password_hash, name, lock_until, failed_attempts, is_allowed, must_change_password 
+        FROM users 
         WHERE username = %s
         """
         return DatabaseHelper.execute_query(query, (username,), fetch_type=2)
+
+    @staticmethod
+    def finalize_user_password(username, new_password_hash):
+        
+        query = """
+        UPDATE users 
+        SET password_hash = %s, must_change_password = 0 
+        WHERE username = %s
+        """
+        return DatabaseHelper.execute_query(query, (new_password_hash, username))
 
     @staticmethod
     def update_lock(username, lock_until):
@@ -349,6 +359,8 @@ class Database:
             name VARCHAR(50),
             lock_until INT DEFAULT 0,
             password_hash VARCHAR(255) NOT NULL,
+            is_allowed INT DEFAULT 0,
+            must_change_password INT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
         """
