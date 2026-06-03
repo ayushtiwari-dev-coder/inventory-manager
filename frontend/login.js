@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://inventory-manager-fs9t.onrender.com";
 
 async function handle_register(e) {
     e.preventDefault();
