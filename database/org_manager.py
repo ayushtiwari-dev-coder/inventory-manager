@@ -232,3 +232,23 @@ class OrgManager:
         finally:
             cursor.close()
             db.close()
+
+
+
+# LOCATION: database\org_manager.py (Replace the get_organization_audit_logs method)
+
+    @staticmethod
+    def get_organization_audit_logs(org_id: int, limit: int = 100):
+        """
+        Retrieves the chronological audit ledger trail for tracking system adjustments.
+        Delegates execution directly to the SQL handler layer.
+        """
+        query = """
+            SELECT log_id as id, action_type, details, username, created_at as timestamp
+            FROM audit_logs
+            WHERE org_id = %s
+            ORDER BY created_at DESC
+            LIMIT %s
+        """
+        # Executing through your database wrapper using 1 for fetchall
+        return DatabaseHelper.execute_query(query, (org_id, limit), fetch_type=1)

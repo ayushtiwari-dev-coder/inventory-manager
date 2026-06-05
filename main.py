@@ -311,6 +311,17 @@ def get_revenue_summary(period: Optional[str] = None, user: dict = Depends(Requi
     # This calls your existing database query that calculates total_transactions, total_revenue, and total_profit
     return analytics.revenue_summary(user["org_id"], period)
 
+# LOCATION: main.py (Replace the existing get_audit_logs endpoint)
+
+@app.get("/api/logs")
+def get_audit_logs(limit: int = 100, user: dict = Depends(RequireRole(["owner", "manager"]))):
+    try:
+        # Route delegates strictly to the OrgManager business layer, securely scoped by org_id
+        logs = OrgManager.get_organization_audit_logs(user["org_id"], limit=limit)
+        return {"status": "success", "data": logs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 # 5. ANALYTICS ROUTES (Org-Scoped Token Required)
 

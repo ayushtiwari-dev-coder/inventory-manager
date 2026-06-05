@@ -1,3 +1,5 @@
+// LOCATION: frontend_react\src\App.jsx
+
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
@@ -9,6 +11,7 @@ import SalesPage from './pages/SalesPage';
 import Layout from './components/Layout';
 import ProfilePage from './pages/ProfilePage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import LogsPage from './pages/LogsPage'; // <-- Add Import
 
 // Verifies global login token state
 function ProtectedRoute() {
@@ -21,33 +24,32 @@ function WorkspaceRequiredRoute() {
   const hasOrgToken = !!localStorage.getItem('org_token');
   return hasOrgToken ? <Layout /> : <Navigate to="/workspaces" replace />;
 }
+
 export default function App() {
-    return (
-        <ToastProvider>
-                <BrowserRouter>
-                    <Routes>
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route path="/register" element={<RegisterPage />} />
-
-                        {/* Global Session Protected Group */}
-                        <Route element={<ProtectedRoute />}>
-                            <Route path="/workspaces" element={<WorkspacePage />} />
-
-                            {/* Active Organization Tenant Namespace Scope */}
-                            <Route element={<WorkspaceRequiredRoute />}>
-                                <Route path="/products" element={<ProductsPage />} />
-                                <Route path="/sales" element={<SalesPage />} />
-                                
-                                {/* WIRE THE ROUTE TO THE RENDER PANEL CORE WINDOW! */}
-                                <Route path="/analytics" element={<AnalyticsPage />} />
-                                
-                                <Route path="/profile" element={<ProfilePage />} />
-                                <Route path="*" element={<Navigate to="/products" replace />} />
-                            </Route>
-                        </Route>
-                        <Route path="*" element={<Navigate to="/login" replace />} />
-                    </Routes>
-                </BrowserRouter>
-        </ToastProvider>
-    );
+  return (
+    <ToastProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          
+          {/* Global Session Protected Group */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/workspaces" element={<WorkspacePage />} />
+            
+            {/* Active Organization Tenant Namespace Scope */}
+            <Route element={<WorkspaceRequiredRoute />}>
+              <Route path="/products" element={<ProductsPage />} />
+              <Route path="/sales" element={<SalesPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/logs" element={<LogsPage />} /> {/* <-- Add Route */}
+              <Route path="*" element={<Navigate to="/products" replace />} />
+            </Route>
+          </Route>
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
+  );
 }

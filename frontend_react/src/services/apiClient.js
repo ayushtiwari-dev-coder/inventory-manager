@@ -1,4 +1,5 @@
-const BASE_URL = window.location.origin;
+const BASE_URL = import.meta.env.DEV ? 'http://127.0.0.1:8000' : window.location.origin;
+
 
 async function apiClient(endpoint, { method = 'GET', data = null, requireAuth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' };

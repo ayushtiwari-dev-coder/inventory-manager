@@ -61,7 +61,7 @@ export default function Layout() {
           >
             <span className="mr-3">📊</span> Sales Metrics
           </NavLink>
-          
+
           <NavLink
             to="/analytics"
             className={({ isActive }) =>
@@ -73,7 +73,20 @@ export default function Layout() {
           >
             <span className="mr-3">📊</span> Advanced Analytics
           </NavLink>
-          {/* Inside frontend_react\src\components\Layout.jsx under the Sidebar navigation links block */}
+          
+
+          {/* Desktop Sidebar Link (Find this and replace the <span>) */}
+          <NavLink
+            to="/logs"
+            className={({ isActive }) =>
+              `flex items-center px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${isActive
+                ? 'bg-[#00B4D8] text-white shadow-lg shadow-[#00B4D8]/20'
+                : 'text-gray-400 hover:bg-[#0B132B]/50 hover:text-white'
+              }`
+            }
+          >
+            <span className="mr-3">📋</span> Audit Logs
+          </NavLink>
 
           <NavLink
             to="/profile"
@@ -116,6 +129,16 @@ export default function Layout() {
               `flex-1 text-center py-2 text-xs font-bold tracking-wide transition-colors ${isActive ? 'text-[#48CAE4]' : 'text-gray-400'}`}
           >
             📊 Analytics
+          </NavLink>
+          {/* Mobile Bottom Bar Link (Find this and replace the text) */}
+          <NavLink
+            to="/logs"
+            className={({ isActive }) =>
+              `flex-1 text-center py-2 text-xs font-bold tracking-wide transition-colors ${isActive ? 'text-[#48CAE4]' : 'text-gray-400'
+              }`
+            }
+          >
+            📋 Logs
           </NavLink>
         </div>
 

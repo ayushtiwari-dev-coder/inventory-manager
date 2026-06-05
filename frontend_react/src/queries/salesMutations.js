@@ -10,10 +10,10 @@ export function useSalesMutations() {
   const recordSaleMutation = useMutation({
     mutationFn: (itemsPayload) => salesApi.recordSale(itemsPayload),
     onSuccess: () => {
-      // Invalidate everything globally because sales alter stock levels, transaction histories, and revenues
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.PRODUCTS });
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.SALES.RECENT });
       queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LOGS.ALL }); // Trigger logs refresh
     },
   });
 
