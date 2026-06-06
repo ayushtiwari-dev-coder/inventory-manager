@@ -1,4 +1,5 @@
-// LOCATION: frontend_react\src\queries\queryKeys.js
+// LOCATION: frontend_react/src/queries/queryKeys.js
+// Add EMPLOYEES to your exported QUERY_KEYS object:
 
 export const QUERY_KEYS = {
   PRODUCTS: ['products'],
@@ -14,5 +15,6 @@ export const QUERY_KEYS = {
   LOGS: {
     ALL: ['audit_logs'],
     LIMIT: (limit) => ['audit_logs', limit]
-  }
+  },
+  EMPLOYEES: ['employees'] // <-- Add this
 };

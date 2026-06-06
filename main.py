@@ -141,6 +141,12 @@ class SaleCreate(BaseModel):
 
 
 
+class ChangeRoleRequest(BaseModel):
+    target_user_id: int
+    new_role: str
+
+
+
 # 1. AUTHENTICATION & IDENTITY (Unprotected)
 
 @app.post("/register")
@@ -321,6 +327,37 @@ def get_audit_logs(limit: int = 100, user: dict = Depends(RequireRole(["owner", 
         return {"status": "success", "data": logs}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+
+
+
+@app.get("/org/members")
+def get_org_members_api(user: dict = Depends(RequireRole(["owner", "manager"]))):
+    members = OrgManager.get_org_members(user["org_id"])
+    return {"status": "success", "data": members}
+
+@app.delete("/org/members/{target_user_id}")
+def remove_member_api(target_user_id: int, user: dict = Depends(RequireRole(["owner", "manager"]))):
+    if user["user_id"] == target_user_id:
+        raise HTTPException(status_code=400, detail="You cannot remove yourself from this menu.")
+    
+    result = OrgManager.remove_member(user["org_id"], target_user_id, user["user_id"], user["username"])
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
+@app.put("/org/members/role")
+def change_member_role_api(data: ChangeRoleRequest, user: dict = Depends(RequireRole(["owner"]))):
+    # Only Owners can elevate/demote roles (Future Proofing)
+    if user["user_id"] == data.target_user_id:
+        raise HTTPException(status_code=400, detail="You cannot change your own role.")
+    
+    result = OrgManager.change_member_role(user["org_id"], data.target_user_id, user["user_id"], user["username"], data.new_role)
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
 
 
 # 5. ANALYTICS ROUTES (Org-Scoped Token Required)

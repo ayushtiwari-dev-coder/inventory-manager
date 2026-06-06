@@ -235,7 +235,6 @@ class OrgManager:
 
 
 
-# LOCATION: database\org_manager.py (Replace the get_organization_audit_logs method)
 
     @staticmethod
     def get_organization_audit_logs(org_id: int, limit: int = 100):
@@ -252,3 +251,16 @@ class OrgManager:
         """
         # Executing through your database wrapper using 1 for fetchall
         return DatabaseHelper.execute_query(query, (org_id, limit), fetch_type=1)
+    
+
+
+    @staticmethod
+    def get_org_members(org_id):
+        query = """
+            SELECT u.user_id, u.username, u.name, u.user_gmail, uo.role, uo.created_at
+            FROM user_organizations uo
+            JOIN users u ON uo.user_id = u.user_id
+            WHERE uo.org_id = %s AND uo.is_active = 1 AND u.is_active = 1
+            ORDER BY FIELD(uo.role, 'owner', 'manager', 'employee'), u.username ASC
+        """
+        return DatabaseHelper.execute_query(query, (org_id,), fetch_type=1)
