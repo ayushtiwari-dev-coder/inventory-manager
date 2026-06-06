@@ -1,5 +1,7 @@
 import React from 'react';
-import { Outlet, useNavigate, NavLink } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import MobileBottomBar from './MobileBottomBar';
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -24,136 +26,12 @@ export default function Layout() {
           Log Out
         </button>
       </header>
+
       <div className="flex flex-1">
-        <aside className="w-64 bg-[#1C2541] border-r border-[#3A506B]/20 flex flex-col p-4 space-y-2 md:flex shrink-0">
-          <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-2">
-            Navigation Menu
-          </div>
-          <NavLink
-            to="/products"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
-                isActive
-                  ? 'bg-[#00B4D8] text-white shadow-lg shadow-[#00B4D8]/20'
-                  : 'text-gray-400 hover:bg-[#0B132B]/50 hover:text-white'
-              }`
-            }
-          >
-            <span className="mr-3">📦</span> Inventory Catalog
-          </NavLink>
-          <NavLink
-            to="/sales"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
-                isActive
-                  ? 'bg-[#00B4D8] text-white shadow-lg shadow-[#00B4D8]/20'
-                  : 'text-gray-400 hover:bg-[#0B132B]/50 hover:text-white'
-              }`
-            }
-          >
-            <span className="mr-3">💰</span> Sales Metrics
-          </NavLink>
-          <NavLink
-            to="/analytics"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
-                isActive
-                  ? 'bg-[#00B4D8] text-white shadow-lg shadow-[#00B4D8]/20'
-                  : 'text-gray-400 hover:bg-[#0B132B]/50 hover:text-white'
-              }`
-            }
-          >
-            <span className="mr-3">📊</span> Advanced Analytics
-          </NavLink>
-          <NavLink
-            to="/employees"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
-                isActive
-                  ? 'bg-[#00B4D8] text-white shadow-lg shadow-[#00B4D8]/20'
-                  : 'text-gray-400 hover:bg-[#0B132B]/50 hover:text-white'
-              }`
-            }
-          >
-            <span className="mr-3">👥</span> Employees
-          </NavLink>
-          <NavLink
-            to="/logs"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
-                isActive
-                  ? 'bg-[#00B4D8] text-white shadow-lg shadow-[#00B4D8]/20'
-                  : 'text-gray-400 hover:bg-[#0B132B]/50 hover:text-white'
-              }`
-            }
-          >
-            <span className="mr-3">📋</span> Audit Logs
-          </NavLink>
-          <NavLink
-            to="/profile"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-xl text-xs font-bold tracking-wide transition-all duration-200 ${
-                isActive
-                  ? 'bg-[#00B4D8] text-white shadow-lg shadow-[#00B4D8]/20'
-                  : 'text-gray-400 hover:bg-[#0B132B]/50 hover:text-white'
-              }`
-            }
-          >
-            <span className="mr-3">🏢</span> Organization Profile
-          </NavLink>
-        </aside>
-        <div className="md:hidden w-full bg-[#1C2541]/60 border-b border-[#3A506B]/20 p-2 flex justify-around items-center fixed bottom-0 left-0 right-0 z-50 backdrop-blur-md">
-          <NavLink
-            to="/products"
-            className={({ isActive }) =>
-              `flex-1 text-center py-2 text-xs font-bold tracking-wide transition-colors ${
-                isActive ? 'text-[#48CAE4]' : 'text-gray-400'
-              }`
-            }
-          >
-            📦 Catalog
-          </NavLink>
-          <NavLink
-            to="/sales"
-            className={({ isActive }) =>
-              `flex-1 text-center py-2 text-xs font-bold tracking-wide transition-colors ${
-                isActive ? 'text-[#48CAE4]' : 'text-gray-400'
-              }`
-            }
-          >
-            💰 Sales
-          </NavLink>
-          <NavLink
-            to="/analytics"
-            className={({ isActive }) =>
-              `flex-1 text-center py-2 text-xs font-bold tracking-wide transition-colors ${
-                isActive ? 'text-[#48CAE4]' : 'text-gray-400'
-              }`
-            }
-          >
-            📊 Analytics
-          </NavLink>
-          <NavLink
-            to="/employees"
-            className={({ isActive }) =>
-              `flex-1 text-center py-2 text-xs font-bold tracking-wide transition-colors ${
-                isActive ? 'text-[#48CAE4]' : 'text-gray-400'
-              }`
-            }
-          >
-            👥 Team
-          </NavLink>
-          <NavLink
-            to="/logs"
-            className={({ isActive }) =>
-              `flex-1 text-center py-2 text-xs font-bold tracking-wide transition-colors ${
-                isActive ? 'text-[#48CAE4]' : 'text-gray-400'
-              }`
-            }
-          >
-            📋 Logs
-          </NavLink>
-        </div>
+        <Sidebar />
+        
+        <MobileBottomBar />
+
         <main className="flex-1 p-4 md:p-6 mb-16 md:mb-0 overflow-y-auto">
           <Outlet />
         </main>
