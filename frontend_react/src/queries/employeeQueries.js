@@ -14,6 +14,18 @@ export function useEmployees() {
   });
 }
 
+// Hook for fetching banned users (Will auto-fail with 403 if not Owner)
+export function useBannedUsers() {
+  return useQuery({
+    queryKey: ['banned_users'],
+    queryFn: async () => {
+      const res = await employeeApi.getBanned();
+      return Array.isArray(res?.data) ? res.data : [];
+    },
+    retry: false // Don't retry if it fails due to permissions (403)
+  });
+}
+
 export function useEmployeeMutations() {
   const queryClient = useQueryClient();
 
@@ -21,12 +33,23 @@ export function useEmployeeMutations() {
     mutationFn: (userId) => employeeApi.removeMember(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.EMPLOYEES });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LOGS.ALL }); // Trigger logs refresh
+      queryClient.invalidateQueries({ queryKey: ['banned_users'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LOGS.ALL });
+    }
+  });
+
+  const unbanMemberMutation = useMutation({
+    mutationFn: (userId) => employeeApi.unbanMember(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['banned_users'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.LOGS.ALL });
     }
   });
 
   return {
     removeMember: removeMemberMutation.mutateAsync,
-    isRemoving: removeMemberMutation.isPending
+    isRemoving: removeMemberMutation.isPending,
+    unbanMember: unbanMemberMutation.mutateAsync,
+    isUnbanning: unbanMemberMutation.isPending
   };
 }

@@ -58,35 +58,48 @@ class OrgManager:
             cursor.close()
             db.close()
 
+
     @staticmethod
     def join_organization(user_id, join_code):
         db = get_connection()
         cursor = db.cursor(dictionary=True)
         try:
             # Step 1: Look up code to see if it belongs to a manager
-            query_m = "SELECT org_id,org_name FROM organizations WHERE manager_join_code = %s AND is_active = 1"
+            query_m = "SELECT org_id, org_name FROM organizations WHERE manager_join_code = %s AND is_active = 1"
             cursor.execute(query_m, (join_code,))
             res_m = cursor.fetchone()
-            
+
             if res_m:
                 role = 'manager'
                 org_id = res_m['org_id']
             else:
                 # Step 2: Check if it belongs to an employee
-                query_e = "SELECT org_id,org_name FROM organizations WHERE employee_join_code = %s AND is_active = 1"
+                query_e = "SELECT org_id, org_name FROM organizations WHERE employee_join_code = %s AND is_active = 1"
                 cursor.execute(query_e, (join_code,))
                 res_e = cursor.fetchone()
+
                 if res_e:
                     role = 'employee'
                     org_id = res_e['org_id']
                 else:
                     return {"status": "error", "message": "Invalid or inactive join code."}
 
+            # ---> NEW STEP: Check if the user is banned from this specific organization
+            ban_check_query = "SELECT reason FROM banned_users WHERE org_id = %s AND user_id = %s"
+            cursor.execute(ban_check_query, (org_id, user_id))
+            banned_record = cursor.fetchone()
+            
+            if banned_record:
+                return {
+                    "status": "error", 
+                    "message": f"You have been banned from this workspace. Reason: {banned_record['reason']}"
+                }
+
             # Step 3: Check for an existing membership row inside the same cursor block
             check_query = "SELECT is_active FROM user_organizations WHERE user_id = %s AND org_id = %s"
             cursor.execute(check_query, (user_id, org_id))
             existing = cursor.fetchone()
-            
+
             if existing:
                 if existing['is_active'] == 1:
                     return {"status": "error", "message": "You are already a member of this organization."}
@@ -103,7 +116,13 @@ class OrgManager:
             })
 
             db.commit()
-            return {"status": "success", "org_id": org_id, "role": role,"org_name":res_m['org_name'] if res_m else res_e['org_name']}
+            return {
+                "status": "success", 
+                "org_id": org_id, 
+                "role": role,
+                "org_name": res_m['org_name'] if res_m else res_e['org_name']
+            }
+
         except Exception as e:
             db.rollback()
             return {"status": "error", "message": str(e)}
@@ -141,21 +160,31 @@ class OrgManager:
             db.close()
 
     @staticmethod
-    def remove_member(org_id, target_user_id, admin_user_id, admin_username):
+    def remove_member(org_id, target_user_id, admin_user_id, admin_username, reason="Removed by administrator"):
         db = get_connection()
         cursor = db.cursor()
         try:
+            # 1. Soft delete them from the active workspace
             query = """
-            UPDATE user_organizations 
-            SET is_active = 0 
-            WHERE org_id = %s AND user_id = %s
+                UPDATE user_organizations
+                SET is_active = 0
+                WHERE org_id = %s AND user_id = %s
             """
             cursor.execute(query, (org_id, target_user_id))
-            
+
+            # 2. Automatically drop them into the banned_users table
+            ban_query = """
+                INSERT IGNORE INTO banned_users (org_id, user_id, reason)
+                VALUES (%s, %s, %s)
+            """
+            cursor.execute(ban_query, (org_id, target_user_id, reason))
+
+            # 3. Log the action
             DatabaseHelper.log_action(cursor, org_id, admin_user_id, admin_username, "REMOVE_MEMBER", {
-                "removed_user_id": target_user_id
+                "removed_user_id": target_user_id,
+                "reason": reason
             })
-            
+
             db.commit()
             return {"status": "success"}
         except Exception as e:
@@ -264,3 +293,39 @@ class OrgManager:
             ORDER BY FIELD(uo.role, 'owner', 'manager', 'employee'), u.username ASC
         """
         return DatabaseHelper.execute_query(query, (org_id,), fetch_type=1)
+    
+    
+
+    @staticmethod
+    def get_banned_users(org_id):
+        query = """
+            SELECT bu.user_id, u.username, u.name, bu.reason, bu.banned_at
+            FROM banned_users bu
+            JOIN users u ON bu.user_id = u.user_id
+            WHERE bu.org_id = %s
+            ORDER BY bu.banned_at DESC
+        """
+        return DatabaseHelper.execute_query(query, (org_id,), fetch_type=1)
+
+    @staticmethod
+    def unban_user(org_id, target_user_id, admin_user_id, admin_username):
+        db = get_connection()
+        cursor = db.cursor()
+        try:
+            # Remove the user from the ban list
+            query = "DELETE FROM banned_users WHERE org_id = %s AND user_id = %s"
+            cursor.execute(query, (org_id, target_user_id))
+
+            # Log the action
+            DatabaseHelper.log_action(cursor, org_id, admin_user_id, admin_username, "UNBAN_USER", {
+                "unbanned_user_id": target_user_id
+            })
+
+            db.commit()
+            return {"status": "success"}
+        except Exception as e:
+            db.rollback()
+            return {"status": "error", "message": str(e)}
+        finally:
+            cursor.close()
+            db.close()

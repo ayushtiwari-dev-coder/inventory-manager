@@ -367,6 +367,20 @@ def change_member_role_api(request: Request, data: ChangeRoleRequest, user: dict
         raise HTTPException(status_code=400, detail=result.get("message"))
     return result
 
+@app.get("/org/members/banned")
+@limiter.limit("30/minute")
+def get_banned_users_api(request: Request, user: dict = Depends(RequireRole(["owner"]))):
+    banned = OrgManager.get_banned_users(user["org_id"])
+    return {"status": "success", "data": banned}
+
+@app.delete("/org/members/banned/{target_user_id}")
+@limiter.limit("20/minute")
+def unban_user_api(request: Request, target_user_id: int, user: dict = Depends(RequireRole(["owner"]))):
+    result = OrgManager.unban_user(user["org_id"], target_user_id, user["user_id"], user["username"])
+    if result.get("status") == "error":
+        raise HTTPException(status_code=400, detail=result.get("message"))
+    return result
+
 
 # STATIC FILES
 app.mount("/", StaticFiles(directory="frontend_react/dist", html=True), name="frontend")

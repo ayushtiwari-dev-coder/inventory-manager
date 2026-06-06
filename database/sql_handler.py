@@ -570,6 +570,18 @@ class Database:
         );
         """
 
+        banned_users_table = """
+        CREATE TABLE IF NOT EXISTS banned_users (
+            ban_id INT AUTO_INCREMENT PRIMARY KEY,
+            org_id INT NOT NULL,
+            user_id INT NOT NULL,
+            reason VARCHAR(255) DEFAULT 'Removed by administrator',
+            banned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(org_id) REFERENCES organizations(org_id) ON DELETE CASCADE,
+            FOREIGN KEY(user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+            UNIQUE(org_id, user_id)
+        );"""
+        
         cursor.execute(user_table)
         cursor.execute(organization_table)
         cursor.execute(user_org_table)
@@ -580,6 +592,7 @@ class Database:
         cursor.execute(org_role_permissions_table)
         cursor.execute(audit_logs_table)
         cursor.execute(daily_summaries_table)
+        cursor.execute(banned_users_table)
 
         db.commit()
 
