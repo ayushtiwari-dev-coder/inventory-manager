@@ -20,7 +20,6 @@ load_test.py
 
 #React
 frontend_react/node_modules/
-frontend_react/dist/
 
 # local experiment files
 cfpm/
