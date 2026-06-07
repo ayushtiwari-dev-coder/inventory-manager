@@ -1,10 +1,8 @@
 // LOCATION: frontend_react/src/pages/EmployeesPage.jsx
-
 import React, { useState } from 'react';
 import { useEmployees, useBannedUsers, useEmployeeMutations } from '../queries/employeeQueries';
 import { useToast } from '../context/ToastContext';
 
-// Helper to calculate "Time Passed" elegantly
 const getTimePassed = (dateString) => {
   const days = Math.floor((new Date() - new Date(dateString)) / (1000 * 60 * 60 * 24));
   if (days === 0) return 'Today';
@@ -12,8 +10,19 @@ const getTimePassed = (dateString) => {
   return `${days} days ago`;
 };
 
+// Helper to get role
+const getUserRole = () => {
+  try {
+    const token = localStorage.getItem('org_token');
+    if (!token) return null;
+    return JSON.parse(atob(token.split('.')[1])).role;
+  } catch (e) {
+    return null;
+  }
+};
+
 export default function EmployeesPage() {
-  const [viewMode, setViewMode] = useState('active'); // 'active' | 'banned'
+  const [viewMode, setViewMode] = useState('active'); 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const { data: employees = [], isLoading: loadingActive, error: activeError } = useEmployees();
@@ -23,6 +32,7 @@ export default function EmployeesPage() {
   
   const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
   const currentUserId = userInfo.user_id;
+  const currentUserRole = getUserRole(); // 'owner' | 'manager'
 
   const handleRemove = async (userId) => {
     try {
@@ -46,7 +56,6 @@ export default function EmployeesPage() {
   return (
     <div className="w-full max-w-6xl mx-auto p-4 lg:p-6 space-y-6 text-gray-100">
       
-      {/* HEADER SECTION WITH TOGGLE */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#1C2541]/40 border border-[#3A506B]/20 p-4 rounded-xl shadow-lg">
         <div>
           <h2 className="text-base font-bold text-white tracking-wide">Workspace Employees</h2>
@@ -61,18 +70,21 @@ export default function EmployeesPage() {
           >
             Active Roster
           </button>
-          <button 
-            onClick={() => setViewMode('banned')}
-            className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
-              viewMode === 'banned' ? 'bg-rose-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            Banned Users
-          </button>
+          
+          {/* ONLY OWNERS CAN SEE THE BANNED USERS TAB */}
+          {currentUserRole === 'owner' && (
+            <button 
+              onClick={() => setViewMode('banned')}
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                viewMode === 'banned' ? 'bg-rose-600 text-white shadow-md' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Banned Users
+            </button>
+          )}
         </div>
       </div>
 
-      {/* TABLE DATA SECTION */}
       <div className="bg-[#1C2541] border border-[#3A506B]/30 rounded-xl overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -94,7 +106,6 @@ export default function EmployeesPage() {
             
             <tbody className="divide-y divide-[#3A506B]/20 text-sm">
               
-              {/* --- ACTIVE EMPLOYEES VIEW --- */}
               {viewMode === 'active' && (
                 loadingActive ? (
                   <tr><td colSpan="5" className="p-8 text-center text-gray-400 italic animate-pulse">Fetching workspace roster...</td></tr>
@@ -106,6 +117,9 @@ export default function EmployeesPage() {
                   employees.map((emp) => {
                     const isSelf = emp.user_id === currentUserId;
                     const isConfirming = confirmDeleteId === emp.user_id;
+                    
+                    // A Manager CANNOT remove an Owner or another Manager
+                    const canRemove = currentUserRole === 'owner' || (currentUserRole === 'manager' && emp.role === 'employee');
 
                     return (
                       <tr key={emp.user_id} className="hover:bg-[#253154]/40 transition-colors">
@@ -127,6 +141,8 @@ export default function EmployeesPage() {
                         <td className="p-4 text-right">
                           {isSelf ? (
                             <span className="text-xs text-gray-500 italic mr-2">It's you</span>
+                          ) : !canRemove ? (
+                            <span className="text-xs text-gray-600 italic mr-2">Protected</span>
                           ) : isConfirming ? (
                              <div className="flex justify-end items-center gap-2">
                                <span className="text-xs text-rose-400 font-medium mr-1">Ban?</span>
@@ -159,7 +175,6 @@ export default function EmployeesPage() {
                 )
               )}
 
-              {/* --- BANNED USERS VIEW --- */}
               {viewMode === 'banned' && (
                 loadingBanned ? (
                   <tr><td colSpan="4" className="p-8 text-center text-gray-400 italic animate-pulse">Loading banned users...</td></tr>
