@@ -289,37 +289,33 @@ class Sale:
         cursor = None
         try:
             db = get_connection()
-            # Using dictionary=True to cleanly map column headers to values
+            # using dictionary=True so column names map cleanly
             cursor = db.cursor(dictionary=True)
-            
+
             total_sale = 0
             total_profit = 0
             sale_items_payload = []
             stock_update_payload = []
             audit_item_details = []
 
-            # STEP 1: Extract all product IDs from the incoming cart
+            # grab all ids so we can lock em in one go
             product_ids = [item["product_id"] for item in items]
-
-            # STEP 2: Dynamically create SQL placeholders matching the number of items
             placeholders = ", ".join(["%s"] * len(product_ids))
 
-            # STEP 3: Single-hop batch fetch query with row-level locking (FOR UPDATE)
+            # batch fetch with lock
             fetch_query = f"""
-                SELECT product_id, product_name, mrp, stock, profit_margin
-                FROM products
+                SELECT product_id, product_name, mrp, stock, profit_margin 
+                FROM products 
                 WHERE org_id = %s AND product_id IN ({placeholders}) AND is_active = 1
                 FOR UPDATE
             """
-            # Combine org_id and product_ids into a single flat list for execution
             cursor.execute(fetch_query, [org_id] + product_ids)
             db_products = cursor.fetchall()
 
-            # STEP 4: Build your in-memory Hash Map (Dictionary)
-            # Allows instant O(1) lookups without any extra database round-trips
+            # dict for fast lookups in ram
             product_map = {p["product_id"]: p for p in db_products}
 
-            # STEP 5: Loop through the cart and process calculations entirely in local RAM
+            # check stock and calcualte totals
             for item in items:
                 product_id = item["product_id"]
                 quantity = item["quantity"]
@@ -327,37 +323,33 @@ class Sale:
                 if quantity <= 0:
                     return {"status": "error", "message": "Sale quantity must be greater than zero"}
 
-                # Fetch the product data from our local dictionary cache
                 product = product_map.get(product_id)
-
                 if not product:
                     return {"status": "error", "message": f"Product ID {product_id} does not exist in this workspace"}
 
-                # Real-time stock verification against our locked database values
                 if product["stock"] < quantity:
                     return {
                         "status": "error", 
                         "message": f"Insufficient stock. Only {product['stock']} units of {product['product_name']} left"
                     }
 
-                # Mathematical aggregations
                 item_sale = product["mrp"] * quantity
                 item_profit = product["profit_margin"] * quantity
 
                 total_sale += item_sale
                 total_profit += item_profit
 
-                # Append data to our batch execution buffers
+                # queue up data for the batch inserts later
                 sale_items_payload.append((product_id, quantity, item_profit, item_sale))
                 stock_update_payload.append((quantity, org_id, product_id))
-                
+
                 audit_item_details.append({
-                    "product_id": product_id, 
-                    "product_name": product["product_name"], 
+                    "product_id": product_id,
+                    "product_name": product["product_name"],
                     "quantity": quantity
                 })
 
-            # STEP 6: Execute Batch Stock Deductions (One single network packet)
+            # bulk update stock so we dont spam the db with queries
             stock_query = """
                 UPDATE products
                 SET stock = stock - %s
@@ -365,7 +357,7 @@ class Sale:
             """
             cursor.executemany(stock_query, stock_update_payload)
 
-            # STEP 7: Insert Parent Invoice Record
+            # create the main sale record
             insert_sale = """
                 INSERT INTO sales (org_id, user_id, total_profit, total_sale)
                 VALUES (%s, %s, %s, %s)
@@ -373,26 +365,35 @@ class Sale:
             cursor.execute(insert_sale, (org_id, user_id, total_profit, total_sale))
             sale_id = cursor.lastrowid
 
-            # STEP 8: Insert Individual Line Items
-            # Reusing the shared connection to write item details mapped to the sale_id
+            # attach the new sale_id to all line items and bulk insert
             insert_item = """
                 INSERT INTO sale_items (sale_id, product_id, quantity, item_profit, item_sale)
                 VALUES (%s, %s, %s, %s, %s)
             """
-            # Map the auto-generated sale_id into each item row payload
             final_sale_items = [(sale_id, p_id, qty, profit, sale) for p_id, qty, profit, sale in sale_items_payload]
             cursor.executemany(insert_item, final_sale_items)
 
-            # STEP 9: Write Security Audit Trail Log
+            # write to audit log
             DatabaseHelper.log_action(cursor, org_id, user_id, username, "RECORD_SALE", {
                 "sale_id": sale_id,
                 "items": audit_item_details,
                 "total_sale": float(total_sale)
             })
 
-            # Commit all operations permanently to the database together
+            # update the daily stats table for analytics so it doesnt crash later on big accounts
+            upsert_summary = """
+                INSERT INTO daily_summaries (org_id, summary_date, total_transactions, total_revenue, total_profit)
+                VALUES (%s, CURDATE(), 1, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    total_transactions = total_transactions + 1,
+                    total_revenue = total_revenue + VALUES(total_revenue),
+                    total_profit = total_profit + VALUES(total_profit)
+            """
+            cursor.execute(upsert_summary, (org_id, total_sale, total_profit))
+
+            # commit everything at once
             db.commit()
-            
+
             return {
                 "status": "success",
                 "total_sale": total_sale,
@@ -401,11 +402,12 @@ class Sale:
 
         except Exception:
             if db:
-                db.rollback()  # Instantly restores stock levels if any error occurred
+                # restore stock if anything blows up
+                db.rollback() 
             raise
         finally:
             if cursor: cursor.close()
-            if db: db.close()  # Safely recycles the connection back into the pool
+            if db: db.close() # put it back in the pool
 
     @staticmethod
     def get_recent_sales(org_id, limit=10):
@@ -563,6 +565,7 @@ class Database:
             summary_id INT AUTO_INCREMENT PRIMARY KEY,
             org_id INT NOT NULL,
             summary_date DATE NOT NULL,
+            total_transactions INT DEFAULT 0,
             total_revenue DECIMAL(15,2) DEFAULT 0,
             total_profit DECIMAL(15,2) DEFAULT 0,
             UNIQUE(org_id, summary_date),
