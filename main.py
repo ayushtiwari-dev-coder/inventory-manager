@@ -244,7 +244,7 @@ def view_products_api(request: Request, user: dict = Depends(RequireRole(["owner
 
 @app.post("/products")
 @limiter.limit("30/minute")
-def create_product(request: Request, data: ProductCreate, user: dict = Depends(RequireRole(["owner", "manager"]))):
+def create_product(request: Request, data: ProductCreate, user: dict = Depends(RequireRole(["owner", "manager","employee"]))):
     result = product_manager.add_product(
         org_id=user["org_id"], 
         user_id=user["user_id"], 
@@ -260,7 +260,7 @@ def create_product(request: Request, data: ProductCreate, user: dict = Depends(R
 
 @app.put("/products/update")
 @limiter.limit("30/minute")
-def update_product_api(request: Request, data: ProductUpdate, user: dict = Depends(RequireRole(["owner", "manager"]))):
+def update_product_api(request: Request, data: ProductUpdate, user: dict = Depends(RequireRole(["owner", "manager","employee"]))):
     result = product_manager.update_product_full(
         org_id=user["org_id"], 
         user_id=user["user_id"], 
@@ -276,7 +276,7 @@ def update_product_api(request: Request, data: ProductUpdate, user: dict = Depen
 
 @app.delete("/products/{product_id}")
 @limiter.limit("30/minute")
-def remove_product(request: Request, product_id: int, user: dict = Depends(RequireRole(["owner", "manager"]))):
+def remove_product(request: Request, product_id: int, user: dict = Depends(RequireRole(["owner", "manager","employee"]))):
     result = product_manager.delete_product(user["org_id"], user["user_id"], user["username"], product_id)
     if result.get("status") != "success":
         raise HTTPException(status_code=400, detail=result.get("message"))
