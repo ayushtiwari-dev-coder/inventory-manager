@@ -344,14 +344,14 @@ def low_stock(request: Request, user: dict = Depends(RequireRole(["owner", "mana
 def get_org_members_api(request: Request, user: dict = Depends(RequireRole(["owner", "manager"]))):
     members = OrgManager.get_org_members(user["org_id"])
     return {"status": "success", "data": members}
+
 @app.delete("/org/members/{target_user_id}")
 @limiter.limit("20/minute")
 def remove_member_api(request: Request, target_user_id: int, user: dict = Depends(RequireRole(["owner", "manager"]))):
     if user["user_id"] == target_user_id:
         raise HTTPException(status_code=400, detail="You cannot remove yourself from this menu.")
     
-    # FIX: Pass the user["role"] into the function so the DB can verify hierarchy
-    result = OrgManager.remove_member(user["org_id"], target_user_id, user["user_id"], user["username"], user["role"])
+    result = OrgManager.remove_member(user["org_id"], target_user_id, user["user_id"], user["username"])
     if result.get("status") == "error":
         raise HTTPException(status_code=400, detail=result.get("message"))
     return result
