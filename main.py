@@ -351,7 +351,8 @@ def remove_member_api(request: Request, target_user_id: int, user: dict = Depend
     if user["user_id"] == target_user_id:
         raise HTTPException(status_code=400, detail="You cannot remove yourself from this menu.")
     
-    result = OrgManager.remove_member(user["org_id"], target_user_id, user["user_id"], user["username"])
+    # FIX: Pass the user["role"] into the function so the DB can verify hierarchy
+    result = OrgManager.remove_member(user["org_id"], target_user_id, user["user_id"], user["username"], user["role"])
     if result.get("status") == "error":
         raise HTTPException(status_code=400, detail=result.get("message"))
     return result
