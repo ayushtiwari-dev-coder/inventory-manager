@@ -159,11 +159,23 @@ class OrgManager:
             cursor.close()
             db.close()
 
+
+
     @staticmethod
-    def remove_member(org_id, target_user_id, admin_user_id, admin_username, reason="Removed by administrator"):
+    def remove_member(org_id, target_user_id, admin_user_id, admin_username, admin_role, reason="Removed by administrator"):
         db = get_connection()
-        cursor = db.cursor()
+        cursor = db.cursor(dictionary=True) # Use dictionary to read role cleanly
         try:
+            # ---> HIERARCHY SECURITY CHECK <---
+            cursor.execute("SELECT role FROM user_organizations WHERE org_id = %s AND user_id = %s AND is_active = 1", (org_id, target_user_id))
+            target = cursor.fetchone()
+            
+            if not target:
+                return {"status": "error", "message": "Target user is not an active member."}
+                
+            if admin_role == 'manager' and target['role'] in ['owner', 'manager']:
+                return {"status": "error", "message": "Permission Denied: Managers can only remove standard employees."}
+
             # 1. Soft delete them from the active workspace
             query = """
                 UPDATE user_organizations
@@ -228,10 +240,7 @@ class OrgManager:
 
     @staticmethod
     def get_org_profile(org_id, user_role):
-        """
-        Fetches organization metadata. 
-        Dynamically masks sensitive join codes as NULL if the requesting user is an employee.
-        """
+        
         db = get_connection()
         cursor = db.cursor(dictionary=True)
         try:
