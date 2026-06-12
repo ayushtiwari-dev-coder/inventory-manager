@@ -27,8 +27,6 @@ export default function RegisterPage() {
       const response =await runRegister(name, username, password, masterCode);
       showToast('Account verified! Performing secure auto-login...', 'success');
       
-      // const loginRes = await runLogin(username, password);
-      localStorage.setItem('global_token', response.global_token);
       localStorage.setItem('user_info', JSON.stringify(response.data));
       
       navigate('/workspaces');

@@ -10,7 +10,9 @@ export const workspaceApi = {
     selectWorkspace: (orgId) =>
         apiClient('/auth/workspace/select', { method: 'POST', data: { org_id: parseInt(orgId, 10) }, requireAuth: true }),
 
-    // NEW: Fetches organization metadata and secure join codes
     getOrgProfile: () =>
-        apiClient('/org/profile', { method: 'GET', requireAuth: true })
+        apiClient('/org/profile', { method: 'GET', requireAuth: true }),
+
+    leaveOrg: () => 
+    apiClient('/org/logout', { method: 'POST', requireAuth: true })
 };

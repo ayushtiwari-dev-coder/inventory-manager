@@ -28,9 +28,7 @@ export default function LoginPage() {
       const response = await runLogin(username, password);
       showToast('Access Granted! Welcome back.', 'success');
 
-      localStorage.setItem('global_token', response.global_token);
       localStorage.setItem('user_info', JSON.stringify(response.data));
-
 
       navigate('/workspaces');
     } catch (err) {

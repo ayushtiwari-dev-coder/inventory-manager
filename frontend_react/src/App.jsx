@@ -15,25 +15,25 @@ import LogsPage from './pages/LogsPage';
 import EmployeesPage from './pages/EmployeesPage';
 
 // Tiny helper to decode the JWT and get the current role
+// Replace getUserRole and the Protected Routes inside your App.jsx with this:
+
 const getUserRole = () => {
   try {
-    const token = localStorage.getItem('org_token');
-    if (!token) return null;
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.role;
+    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+    return userInfo.current_role || null;
   } catch (e) {
     return null;
   }
 };
 
 function ProtectedRoute() {
-  const hasGlobalToken = !!localStorage.getItem('global_token');
-  return hasGlobalToken ? <Outlet /> : <Navigate to="/login" replace />;
+  const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+  return userInfo.user_id ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
 function WorkspaceRequiredRoute() {
-  const hasOrgToken = !!localStorage.getItem('org_token');
-  return hasOrgToken ? <Layout /> : <Navigate to="/workspaces" replace />;
+  const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+  return userInfo.current_role ? <Layout /> : <Navigate to="/workspaces" replace />;
 }
 
 // Blocks Employees from accessing Manager/Owner routes

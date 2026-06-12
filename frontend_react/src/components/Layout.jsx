@@ -2,16 +2,24 @@ import React from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import MobileBottomBar from './MobileBottomBar';
+import { authApi } from '../services/authApi';
+import { workspaceApi } from '../services/workspaceApi';
 
 export default function Layout() {
   const navigate = useNavigate();
   const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
 
-  const handleLogout = () => {
-    localStorage.removeItem('org_token');
-    navigate('/workspaces');
-  };
-
+// Inside Layout()
+const handleLogout = async () => {
+  try { 
+    await workspaceApi.leaveOrg(); 
+  } catch (e) {}
+  
+  const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+  delete userInfo.current_role;
+  localStorage.setItem('user_info', JSON.stringify(userInfo));
+  navigate('/workspaces');
+};
   return (
     <div className="min-h-screen bg-[#0B132B] flex flex-col">
       <header className="bg-[#1C2541] border-b border-[#3A506B]/30 px-6 py-4 flex justify-between items-center z-10">

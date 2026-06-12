@@ -9,31 +9,27 @@ export function useUserWorkspaces() {
   return useQuery({
     queryKey: ['user', 'workspaces'],
     queryFn: async () => {
-      // 1. Get current user profile data from local storage to know who we are
+
       const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
       if (!userInfo.username) return [];
 
-      // 2. Query your backend auth logic context loop to return fresh user records
-      // Since your login returns user workspaces, we hit a light session checker or profile fetcher
+     
       const response = await workspaceApi.getOrgProfile(); 
       
       const userContext = JSON.parse(localStorage.getItem('user_info'));
       return userContext?.workspaces || [];
     },
-    staleTime: 0, // Always confirm freshness when mounting the picker card stream view
+    staleTime: 0, 
   });
 }
+
 
 export function useSelectWorkspace() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (orgId) => workspaceApi.selectWorkspace(orgId),
     onSuccess: (response) => {
-      const token = response?.orgToken || response?.org_token || response?.data?.org_token;
-      if (token) {
-        localStorage.setItem('org_token', token);
-        queryClient.clear(); // Wipes previous queries to prevent tenant leakage
-      }
+      queryClient.clear(); // Wipes previous queries to prevent tenant leakage
     }
   });
 }

@@ -10,12 +10,10 @@ const getTimePassed = (dateString) => {
   return `${days} days ago`;
 };
 
-// Helper to get role
 const getUserRole = () => {
   try {
-    const token = localStorage.getItem('org_token');
-    if (!token) return null;
-    return JSON.parse(atob(token.split('.')[1])).role;
+    const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+    return userInfo.current_role || null;
   } catch (e) {
     return null;
   }

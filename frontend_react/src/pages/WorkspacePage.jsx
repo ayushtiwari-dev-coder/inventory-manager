@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext';
 import { useSelectWorkspace } from '../queries/workspaceQueries';
 import { validateOrgName, validateEmail } from '../utils/validators';
 import WorkspacePicker from '../components/WorkspacePicker';
+import { authApi } from '../services/authApi';
 
 export default function WorkspacePage() {
   // Navigation views: 'picker', 'create', 'join'
@@ -33,7 +34,11 @@ export default function WorkspacePage() {
   // --- ACTIONS ---
   const handleSelectWorkspace = async (orgId) => {
     try {
-      await selectOrg(orgId);
+      const response = await selectOrg(orgId);
+      const userInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+      userInfo.current_role = response?.role || response?.data?.role || workspaces.find(w => w.org_id === orgId)?.role;
+      localStorage.setItem('user_info', JSON.stringify(userInfo));
+
       showToast('Connected to organization tenant namespace!', 'success');
       navigate('/products');
     } catch (err) {
@@ -43,24 +48,27 @@ export default function WorkspacePage() {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
-    const orgErr = validateOrgName(orgName); if (orgErr) return showToast(orgErr, 'error');
-    const emailErr = validateEmail(ownerGmail); if (emailErr) return showToast(emailErr, 'error');
+    const orgErr = validateOrgName(orgName); 
+    if (orgErr) return showToast(orgErr, 'error');
+    const emailErr = validateEmail(ownerGmail); 
+    if (emailErr) return showToast(emailErr, 'error');
 
     try {
-      // 1. INSIDE handleCreateSubmit, update the success block:
       const createRes = await runCreate(orgName, ownerGmail);
       showToast(`Organization "${orgName}" initialized successfully!`, 'success');
-      localStorage.setItem('org_token', createRes.org_token);
-
-      // FIX: Update your cached user context data so it lists the new org immediately!
+      
+      
       const currentUserInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
       if (!currentUserInfo.workspaces) currentUserInfo.workspaces = [];
+      
       currentUserInfo.workspaces.push({
         org_id: createRes.org_id,
         org_name: orgName,
-        role: 'owner' // Creator is automatically marked owner
+        role: 'owner'
       });
+      currentUserInfo.current_role = 'owner';
       localStorage.setItem('user_info', JSON.stringify(currentUserInfo));
+      
       navigate('/products');
     } catch (err) {
       showToast(err.message, 'error');
@@ -73,39 +81,36 @@ export default function WorkspacePage() {
 
     try {
       const response = await runJoin(joinCode.toUpperCase());
-      const token = response?.orgToken || response?.org_token || response?.data?.org_token;
       
-      if (token) {
-        localStorage.setItem('org_token', token);
-
-        // --- CACHE SYNCHRONIZATION LOOP ---
-        // Dynamically append the newly joined workspace parameters into the profile list
-        const currentUserInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
-        if (!currentUserInfo.workspaces) currentUserInfo.workspaces = [];
-
-        currentUserInfo.workspaces.push({
-          org_id: response.org_id,
-          org_name: response.org_name || `Workspace #${response.org_id}`, // Safe fallback mapping
-          role: response.role // Correctly captures whether they joined as a manager or employee
-        });
-        localStorage.setItem('user_info', JSON.stringify(currentUserInfo));
-
-        showToast('Connected to organization tenant namespace!', 'success');
-        navigate('/products');
-      } else {
-        showToast('Failed to acquire a secure workspace access token.', 'error');
-      }
+      // We removed the 'if (token)' check! The cookie is handled silently.
+      const currentUserInfo = JSON.parse(localStorage.getItem('user_info') || '{}');
+      if (!currentUserInfo.workspaces) currentUserInfo.workspaces = [];
+      
+      currentUserInfo.workspaces.push({
+        org_id: response.org_id,
+        org_name: response.org_name || `Workspace #${response.org_id}`,
+        role: response.role 
+      });
+      currentUserInfo.current_role = response.role;
+      localStorage.setItem('user_info', JSON.stringify(currentUserInfo));
+      
+      showToast('Connected to organization tenant namespace!', 'success');
+      navigate('/products');
+      
     } catch (err) {
       showToast(err.message || 'An error occurred while joining.', 'error');
     }
   };
 
-  const handleGlobalLogout = () => {
-    localStorage.clear();
-    showToast('Logged out from global session.', 'info');
-    navigate('/login');
-  };
-
+const handleGlobalLogout = async () => {
+  try { 
+    await authApi.logout(); 
+  } catch(e) {}
+  
+  localStorage.clear();
+  showToast('Logged out from global session.', 'info');
+  navigate('/login');
+};
   const handleBackToPicker = () => {
     setOrgName('');
     setJoinCode('');

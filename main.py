@@ -1,7 +1,7 @@
 # LOCATION: main.py
 ############################################################
 import os
-from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi import FastAPI, HTTPException, Depends, Request,Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -143,83 +143,113 @@ class ChangeRoleRequest(BaseModel):
 
 # 1. AUTHENTICATION & IDENTITY (Unprotected)
 
+
 @app.post("/register")
 @limiter.limit("3/minute")
-def register(request: Request, data: RegisterRequest):
+def register(request: Request, response: Response, data: RegisterRequest):
     result = login_logic.create_account(data.username, data.password, data.name, data.master_code)
+    
     if result.get("status") != "success":
         raise HTTPException(status_code=400, detail=result.get("message", "Registration failed"))
+    
+    # Extract the token and set it securely as an HttpOnly cookie
+    global_token = result.get("global_token")
+    if global_token:
+        response.set_cookie(key="global_token", value=global_token, httponly=True, samesite="lax")
+        # Optional: Remove it from the JSON payload so the frontend never sees it directly
+        del result["global_token"]
+        
     return result
 
 @app.post("/login")
 @limiter.limit("5/minute")
-def user_login(request: Request, data: LoginRequest):
+def user_login(request: Request, response: Response, data: LoginRequest):
     result = login_logic.login(data.username, data.password)
     if result.get("status") != "success":
         raise HTTPException(status_code=401, detail=result.get("message"))
-    
+
     user_data = result["data"]
     global_token = create_passport(user_id=user_data["user_id"], username=user_data["username"])
     
-    return { 
-        "status": "success", 
-        "global_token": global_token, 
+    # Send Token via HttpOnly Cookie
+    response.set_cookie(key="global_token", value=global_token, httponly=True, samesite="lax")
+    
+    return {
+        "status": "success",
         "data": user_data
     }
 
 
-# 2. WORKSPACE SELECTION (Global Token Required)
-
 @app.post("/auth/workspace/select")
 @limiter.limit("30/minute")
-def select_workspace(request: Request, data: WorkspaceSelect, user: dict = Depends(get_current_user)):
+def select_workspace(request: Request, response: Response, data: WorkspaceSelect, user: dict = Depends(get_current_user)):
     result = login_logic.activate_workspace(user["user_id"], data.org_id)
     if result["status"] == "error":
         raise HTTPException(status_code=403, detail=result["message"])
-    
+
     org_data = result["data"]
     org_token = create_passport(
-        user_id=user["user_id"], 
-        username=user["username"], 
-        org_id=org_data["org_id"], 
+        user_id=user["user_id"],
+        username=user["username"],
+        org_id=org_data["org_id"],
         role=org_data["role"]
     )
     
-    return { 
-        "status": "success", 
-        "org_token": org_token, 
-        "role": org_data["role"], 
+    response.set_cookie(key="org_token", value=org_token, httponly=True, samesite="lax")
+    
+    return {
+        "status": "success",
+        "role": org_data["role"],
         "org_id": org_data["org_id"]
     }
 
 @app.post("/org/create")
 @limiter.limit("5/minute")
-def create_workspace(request: Request, data: CreateOrgRequest, user: dict = Depends(get_current_user)):
+def create_workspace(request: Request, response: Response, data: CreateOrgRequest, user: dict = Depends(get_current_user)):
     result = OrgManager.create_organization(data.org_name, user["user_id"], data.owner_gmail)
     if result["status"] == "error":
         raise HTTPException(status_code=400, detail=result["message"])
+    
+    org_token = result.pop("org_token", None)
+    if org_token:
+        response.set_cookie(key="org_token", value=org_token, httponly=True, samesite="lax")
+        
     return result
 
 @app.post("/org/join")
 @limiter.limit("10/minute")
-def join_workspace(request: Request, data: JoinOrgRequest, user: dict = Depends(get_current_user)):
+def join_workspace(request: Request, response: Response, data: JoinOrgRequest, user: dict = Depends(get_current_user)):
     result = OrgManager.join_organization(user["user_id"], data.join_code)
     if result["status"] == "error":
         raise HTTPException(status_code=400, detail=result["message"])
-        
+
     org_token = create_passport(
-        user_id=user["user_id"], 
-        username=user["username"], 
-        org_id=result["org_id"], 
+        user_id=user["user_id"],
+        username=user["username"],
+        org_id=result["org_id"],
         role=result["role"]
     )
     
-    return { 
-        "status": "success", 
-        "org_token": org_token, 
-        "role": result["role"], 
+    response.set_cookie(key="org_token", value=org_token, httponly=True, samesite="lax")
+    
+    return {
+        "status": "success",
+        "role": result["role"],
         "org_id": result["org_id"]
     }
+
+@app.post("/auth/logout")
+def global_logout(response: Response):
+    """Fully logs the user out of the application."""
+    response.delete_cookie("global_token", httponly=True, samesite="lax")
+    response.delete_cookie("org_token", httponly=True, samesite="lax")
+    return {"status": "success", "message": "Logged out globally."}
+
+@app.post("/org/logout")
+def workspace_logout(response: Response):
+    """Drops the user out of the workspace, returning them to the picker."""
+    response.delete_cookie("org_token", httponly=True, samesite="lax")
+    return {"status": "success", "message": "Left workspace."}
 
 @app.get("/org/profile")
 @limiter.limit("60/minute")
