@@ -155,7 +155,7 @@ def register(request: Request, response: Response, data: RegisterRequest):
     # Extract the token and set it securely as an HttpOnly cookie
     global_token = result.get("global_token")
     if global_token:
-        response.set_cookie(key="global_token", value=global_token, httponly=True, samesite="lax")
+        response.set_cookie(key="global_token", value=global_token, httponly=True, samesite="none",secure=True,max_age=432000)
         # Optional: Remove it from the JSON payload so the frontend never sees it directly
         del result["global_token"]
         
@@ -172,7 +172,7 @@ def user_login(request: Request, response: Response, data: LoginRequest):
     global_token = create_passport(user_id=user_data["user_id"], username=user_data["username"])
     
     # Send Token via HttpOnly Cookie
-    response.set_cookie(key="global_token", value=global_token, httponly=True, samesite="lax")
+    response.set_cookie(key="global_token", value=global_token, httponly=True, samesite="none",secure=True,max_age=432000)
     
     return {
         "status": "success",
@@ -195,7 +195,7 @@ def select_workspace(request: Request, response: Response, data: WorkspaceSelect
         role=org_data["role"]
     )
     
-    response.set_cookie(key="org_token", value=org_token, httponly=True, samesite="lax")
+    response.set_cookie(key="org_token", value=org_token, httponly=True,samesite="none",secure=True,max_age=432000)
     
     return {
         "status": "success",
@@ -212,7 +212,7 @@ def create_workspace(request: Request, response: Response, data: CreateOrgReques
     
     org_token = result.pop("org_token", None)
     if org_token:
-        response.set_cookie(key="org_token", value=org_token, httponly=True, samesite="lax")
+        response.set_cookie(key="org_token", value=org_token, httponly=True, samesite="none",secure=True,max_age=432000)
         
     return result
 
@@ -230,7 +230,7 @@ def join_workspace(request: Request, response: Response, data: JoinOrgRequest, u
         role=result["role"]
     )
     
-    response.set_cookie(key="org_token", value=org_token, httponly=True, samesite="lax")
+    response.set_cookie(key="org_token", value=org_token, httponly=True, samesite="none",secure=True,max_age=432000)
     
     return {
         "status": "success",
@@ -241,14 +241,14 @@ def join_workspace(request: Request, response: Response, data: JoinOrgRequest, u
 @app.post("/auth/logout")
 def global_logout(response: Response):
     """Fully logs the user out of the application."""
-    response.delete_cookie("global_token", httponly=True, samesite="lax")
-    response.delete_cookie("org_token", httponly=True, samesite="lax")
+    response.delete_cookie("global_token", httponly=True,samesite="none",secure=True)
+    response.delete_cookie("org_token", httponly=True, samesite="none",secure=True)
     return {"status": "success", "message": "Logged out globally."}
 
 @app.post("/org/logout")
 def workspace_logout(response: Response):
     """Drops the user out of the workspace, returning them to the picker."""
-    response.delete_cookie("org_token", httponly=True, samesite="lax")
+    response.delete_cookie("org_token", httponly=True, samesite="none",secure=True)
     return {"status": "success", "message": "Left workspace."}
 
 @app.get("/org/profile")
