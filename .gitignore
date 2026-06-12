@@ -18,6 +18,7 @@ bundle.py
 inventory_full_context.txt
 load_test.py
 
+
 #React
 frontend_react/node_modules/
 

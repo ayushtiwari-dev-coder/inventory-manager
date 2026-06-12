@@ -19,7 +19,7 @@ DEFAULT_PERMISSIONS = {
         "record_sale", "view_sales", "view_analytics", "view_audit_logs"
     ],
     "employee": [
-        "view_products", "record_sale"
+        "view_products", "record_sale","add_product", "update_product", "delete_product"
     ]
 }
 
