@@ -13,6 +13,7 @@ import ProfilePage from './pages/ProfilePage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import LogsPage from './pages/LogsPage';
 import EmployeesPage from './pages/EmployeesPage';
+import AboutPage from './pages/AboutPage';
 
 // Tiny helper to decode the JWT and get the current role
 // Replace getUserRole and the Protected Routes inside your App.jsx with this:
@@ -50,18 +51,19 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          
+
           <Route element={<ProtectedRoute />}>
             <Route path="/workspaces" element={<WorkspacePage />} />
-            
+
             <Route element={<WorkspaceRequiredRoute />}>
               {/* Universal Routes (All Roles) */}
               <Route path="/products" element={<ProductsPage />} />
-              <Route path="/sales" element={<SalesPage />} />
               <Route path="/profile" element={<ProfilePage />} />
-              
+              <Route path="/about" element={<AboutPage />} /> 
+
               {/* Privileged Routes (Managers & Owners Only) */}
               <Route element={<ManagerRoute />}>
+                <Route path="/sales" element={<SalesPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/employees" element={<EmployeesPage />} />
                 <Route path="/logs" element={<LogsPage />} />
@@ -70,7 +72,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/products" replace />} />
             </Route>
           </Route>
-          
+
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

@@ -53,8 +53,12 @@ export default function Sidebar() {
       )}
 
       <NavLink to="/profile" className={linkStyles}>
-        <span className="mr-3">🏢</span> Organization Profile
-      </NavLink>
+          <span className="mr-3">👤</span> Organization Profile
+        </NavLink>
+        
+        <NavLink to="/about" className={linkStyles}>
+          <span className="mr-3">ℹ️</span> About Developer
+        </NavLink>
     </aside>
   );
 }

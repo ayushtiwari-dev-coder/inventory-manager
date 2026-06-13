@@ -71,13 +71,21 @@ export default function MobileBottomBar() {
                 </NavLink>
               )}
 
-              <NavLink 
-                to="/profile" 
-                onClick={() => setIsMoreOpen(false)} 
-                className={({ isActive }) => `px-4 py-3 text-sm font-bold transition-colors ${isActive ? 'bg-[#00B4D8]/20 text-[#48CAE4]' : 'text-white hover:bg-[#253154]'}`}
-              >
-                🏢 Org Profile
-              </NavLink>
+              <NavLink
+              to="/profile"
+              onClick={() => setIsMoreOpen(false)}
+              className={({ isActive }) => `px-4 py-3 text-sm font-bold transition-colors ${isActive ? 'bg-[#00B4D8]/20 text-[#48CAE4]' : 'text-white hover:bg-[#253154]'}`}
+            >
+              👤 Org Profile
+            </NavLink>
+
+            <NavLink
+              to="/about"
+              onClick={() => setIsMoreOpen(false)}
+              className={({ isActive }) => `px-4 py-3 text-sm font-bold transition-colors ${isActive ? 'bg-[#00B4D8]/20 text-[#48CAE4]' : 'text-white hover:bg-[#253154]'}`}
+            >
+              ℹ️ About Developer
+            </NavLink>
             </div>
           </>
         )}
