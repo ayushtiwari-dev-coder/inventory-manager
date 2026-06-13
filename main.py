@@ -27,7 +27,7 @@ from inventory import product_manager, sales_manager
 from analytics.report import analytics
 
 # --- INITIALIZATION ---
-app = FastAPI(title="Multi-Tenant Inventory SaaS")
+app = FastAPI(title="InvenTrack")
 
 # Initialize Rate Limiter (Tracks by User IP)
 limiter = Limiter(key_func=get_remote_address)

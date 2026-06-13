@@ -9,7 +9,7 @@ export default function SalesPage() {
 
   // --- TANSTACK QUERY HOOK INTEGRATIONS ---
   const { data: recentSales = [], isLoading: salesLoading } = useRecentSales();
-const { data: currentSummary = { total_transactions: 0, total_revenue: 0, total_profit: 0 }, isLoading: summaryLoading } = useRevenueSummary(timeframe);
+  const { data: currentSummary = { total_transactions: 0, total_revenue: 0, total_profit: 0 }, isLoading: summaryLoading } = useRevenueSummary(timeframe);
 
   return (
     <div className="w-full max-w-6xl mx-auto p-4 lg:p-6 space-y-6 text-gray-100">
@@ -31,11 +31,10 @@ const { data: currentSummary = { total_transactions: 0, total_revenue: 0, total_
             <button
               key={opt.value}
               onClick={() => setTimeframe(opt.value)}
-              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                timeframe === opt.value
+              className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${timeframe === opt.value
                   ? 'bg-[#00B4D8] text-white shadow-md'
                   : 'text-gray-400 hover:text-white'
-              }`}
+                }`}
             >
               {opt.label}
             </button>
@@ -106,7 +105,7 @@ const { data: currentSummary = { total_transactions: 0, total_revenue: 0, total_
                 recentSales.map((sale, idx) => (
                   <tr key={idx} className="hover:bg-[#253154]/40 transition-colors">
                     <td className="p-4 font-mono text-xs text-gray-400">
-                      {new Date(sale.sale_time).toLocaleString()}
+                      {new Date(sale.sale_time.replace(' ', 'T') + 'Z').toLocaleString()}
                     </td>
                     <td className="p-4 font-medium text-white">
                       {sale.product_name}

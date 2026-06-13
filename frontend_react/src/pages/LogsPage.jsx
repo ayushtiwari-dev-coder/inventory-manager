@@ -49,14 +49,14 @@ const FormatDetails = ({ details }) => {
               <span className="text-gray-400 font-semibold min-w-110px pt-0.5">
                 {cleanKey}:
               </span>
-              
+
               <div className="flex-1">
                 {/* 1. Handle Arrays (Like 'items' in a Sale) */}
                 {Array.isArray(value) ? (
                   <div className="flex flex-col gap-1.5 mt-1 sm:mt-0">
                     {value.map((item, idx) => (
-                      <div 
-                        key={idx} 
+                      <div
+                        key={idx}
                         className="bg-[#1C2541]/60 p-2 rounded-md border border-[#3A506B]/40 text-[11px] flex flex-wrap gap-x-4 gap-y-1"
                       >
                         {typeof item === 'object' && item !== null ? (
@@ -72,21 +72,21 @@ const FormatDetails = ({ details }) => {
                       </div>
                     ))}
                   </div>
-                ) 
-                
-                
-                : typeof value === 'object' && value !== null ? (
-                  <pre className="text-gray-300 text-[10px] bg-[#1C2541]/40 p-2 rounded-md border border-[#3A506B]/30 whitespace-pre-wrap">
-                    {JSON.stringify(value, null, 2)}
-                  </pre>
-                ) 
-                
-                
-                : (
-                  <span className="text-white wrap-break-word font-medium pt-0.5 inline-block">
-                    {String(value)}
-                  </span>
-                )}
+                )
+
+
+                  : typeof value === 'object' && value !== null ? (
+                    <pre className="text-gray-300 text-[10px] bg-[#1C2541]/40 p-2 rounded-md border border-[#3A506B]/30 whitespace-pre-wrap">
+                      {JSON.stringify(value, null, 2)}
+                    </pre>
+                  )
+
+
+                    : (
+                      <span className="text-white wrap-break-word font-medium pt-0.5 inline-block">
+                        {String(value)}
+                      </span>
+                    )}
               </div>
             </div>
           );
@@ -147,7 +147,7 @@ export default function LogsPage() {
                 logs.map((log) => (
                   <tr key={log.id} className="hover:bg-[#253154]/40 transition-colors">
                     <td className="p-4 font-mono text-xs text-gray-400 align-top">
-                      {new Date(log.timestamp).toLocaleString()}
+                      {new Date(log.timestamp.replace(' ', 'T') + 'Z').toLocaleString()}
                     </td>
                     <td className="p-4 align-top">
                       <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold inline-block tracking-wider ${getActionColor(log.action_type)}`}>
