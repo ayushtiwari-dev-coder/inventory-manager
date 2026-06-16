@@ -1,21 +1,76 @@
-MIT License
-
+AYUSH COMMERCIAL RIGHTS RESERVED LICENSE (ACRR) v1.3
 Copyright (c) 2026 Ayush Tiwari
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+•  YOU CAN: View, study, and run this Software locally for personal or educational use only.
+•  YOU CANNOT: Host, deploy, or expose this Software on any public server, cloud, or network — including as a SaaS, PaaS, or any hosted service.
+•  YOU CANNOT: Copy, clone, redistribute, or build a competing product using this Software's code, structure, schema, or architecture.
+•  YOU CANNOT: Sell, sublicense, rent, or commercially monetize this Software or any modified version of it.
+•  YOU CANNOT: Use, share, or exploit any credentials, API keys, or environment variables — even if accidentally exposed anywhere in the repository or its history.
+•  CONTRIBUTIONS: You keep authorship of what you write, but you grant the copyright holder a permanent, irrevocable license to use it. The copyright holder has sole final say on all contributions — no obligation to accept, merge, or explain any decision.
+•  OWNERSHIP: All intellectual property belongs exclusively to Ayush Tiwari. This license grants limited usage rights only — no ownership is transferred.
+•  VIOLATIONS: Immediately and automatically terminate all rights granted under this license.
+•  COMMERCIAL LICENSING: Contact ayushtiwari24512@gmail.com
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. Definitions
+•  "Software" means the original source code, database schemas, system architecture, API designs, documentation, and asset files authored by Ayush Tiwari.
+•  "Third-Party Dependencies" means any external libraries, frameworks, or packages bundled with or utilized by this Software (including, but not limited to, FastAPI, React, TailwindCSS, Vite, Recharts, and MySQL connectors).
+•  "Contributor" means any individual or entity that submits a Contribution to the Software.
+•  "Contribution" means any original work of authorship, including modifications or additions to the Software, intentionally submitted to Ayush Tiwari for inclusion in the Software.
+•  "Credentials" means any environment variables, API keys, secrets, tokens, database connection strings, or configuration values — whether or not they appear in the repository.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. Permissions Granted
+Subject to the restrictions in Section 3, you are granted a non-exclusive, non-transferable, royalty-free right to:
+•  View, study, and learn from the Software's source code and architecture.
+•  Execute and run the Software locally on your personal hardware strictly for personal, educational, non-production, or evaluation purposes.
+•  Create completely independent, clean-room implementations of software using generalized concepts or ideas learned from studying this Software.
+•  Submit Contributions to the Software for consideration by the copyright holder, subject to Section 6.
+
+3. Restrictions
+You may NOT do any of the following without prior explicit, written authorization from Ayush Tiwari (ayushtiwari24512@gmail.com):
+•  Host, deploy, or execute this Software on any public server, cloud infrastructure, or internet-accessible network.
+•  Offer, distribute, or expose this Software as a Managed Service, Software-as-a-Service (SaaS), Platform-as-a-Service (PaaS), or self-hosted business solution.
+•  Sell, lease, rent, sublicense, redistribute, or directly monetize the Software or any modified versions thereof.
+•  Distribute, publish, or share modified versions, branches, or forks of this Software publicly.
+•  Use substantial portions, structural database schemas, or direct logic translations of this Software within a commercial product.
+•  Claim ownership, patent rights, or exclusive authorship over the Software or its architectural design.
+•  Remove, obscure, or alter any copyright notices or author credits within the source code files.
+•  Attempt to discover, extract, reconstruct, or reproduce any Credentials — including environment variables — whether or not those Credentials are present, named, or referenced in the repository. Any accidental exposure of Credentials in the repository does not constitute authorization to use, share, or exploit them.
+
+4. Credentials & Environment Variables
+The Software may reference environment variable names, configuration keys, or placeholder values. These references do not constitute disclosure, grant of access, or permission to use any actual Credentials. You must not:
+•  Use, store, share, or exploit any Credentials that may be inadvertently exposed in the repository, commit history, or any related artifact.
+•  Attempt to reconstruct or guess Credentials from partial information present in the repository.
+•  Use any Credentials to access, query, or interact with any live system, database, or API associated with this Software.
+If you discover any accidentally exposed Credentials, you are required to notify the copyright holder immediately at ayushtiwari24512@gmail.com and must not make any use of them.
+
+5. Derivative Works and Reverse Engineering
+•  Modified, adapted, or derivative versions of this Software remain fully subject to the restrictions of this license.
+•  Changing variable names, function names, code formatting, file directory structures, comments, or making minor structural modifications does not establish ownership rights or lift the commercial restrictions of this license.
+•  You may not copy, replicate, clone, or reconstruct this Software's code, logic, database schema, or architecture — in whole or in part — for the purpose of building a competing product, redistributing it, or using it in any commercial context.
+
+6. Contributor Terms
+Contributions to this Software are welcome. By submitting a Contribution (via pull request, patch, issue, or any other means) to this Software, you agree to the following:
+•  You grant Ayush Tiwari a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license to use, reproduce, modify, incorporate, sublicense, and distribute your Contribution as part of this Software, including under any future commercial licensing terms the copyright holder may choose. You retain authorship of your own Contribution — this license grant does not transfer ownership of your original work to the copyright holder, but it does allow the copyright holder full and unrestricted use of it within this project.
+•  You confirm that you are the original author of the Contribution, that it does not infringe any third-party rights, and that you have the legal right to grant the above license.
+•  You understand and accept that Ayush Tiwari retains sole and final discretion over whether any Contribution is accepted, merged, modified, or rejected. There is no obligation to accept, respond to, or provide any explanation for any decision — this is normal and standard for any maintainer-led project.
+•  Your Contribution does not grant you any ownership rights, co-authorship of the overall Software, intellectual property rights over the project, or any right to compensation. Credit for contributions may be given at the copyright holder's sole discretion.
+•  Submitting a Contribution does not entitle you to any commercial use, deployment rights, or permissions beyond those granted in Section 2 of this license.
+•  All Contributions, once incorporated, remain subject to all restrictions in this license.
+
+7. Third-Party Component Exception
+•  This Software relies on and bundles Third-Party Dependencies. Those dependencies remain strictly subject to their respective open-source licenses (e.g., the MIT License, Apache License, etc.).
+•  The restrictions, ownership assertions, and terms of this ACRR license apply solely to the original codebase, proprietary system architecture, unique API endpoints, and implementation layers authored by Ayush Tiwari.
+
+8. Governing Law & Enforcement
+This license is governed by the laws of India. Any disputes arising from or related to this license shall be subject to the exclusive jurisdiction of the courts located in India.
+Violation of any restriction in this license automatically and immediately terminates all rights granted to you under Section 2. Upon termination, you must cease all use of the Software and destroy all copies in your possession.
+
+9. Commercial Licensing
+Any commercial use, public hosting, deployment, resale, redistribution, sublicensing, or service offering of this Software requires a separate, formal commercial licensing agreement signed by the copyright holder.
+For commercial licensing inquiries, contact: ayushtiwari24512@gmail.com
+
+10. Ownership
+All rights, title, interest, and intellectual property inside and relating to this Software remain exclusively with Ayush Tiwari. This license grants limited, revocable usage rights only and does not transfer intellectual property or ownership.
+
+11. Disclaimer of Warranty
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE
